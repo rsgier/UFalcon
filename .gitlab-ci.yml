@@ -9,7 +9,7 @@ style:
         - python
     script:
         - pyenv local $(latest_python 3.6)
-        - tox -e style -i https://cosmo-pypi.phys.ethz.ch/simple
+        - tox -e style
     allow_failure: true
     stage: style
 
@@ -19,8 +19,8 @@ tests:
         - python
     script:
         - pyenv versions
-        - pyenv local $(latest_python 2.7) $(latest_python 3.6)
-        - tox -r -vv -i https://cosmo-pypi.phys.ethz.ch/simple
+        - pyenv local $(latest_python 3.6)
+        - tox -r -vv 
     stage: test_code
     artifacts:
            paths:
@@ -31,7 +31,7 @@ docs:
         - python
     script:
         - pyenv local $(latest_python 3.6)
-        - tox -e docs -i https://cosmo-pypi.phys.ethz.ch/simple
+        - tox -e docs 
     stage: test_and_create_docs
     dependencies:
           - tests
@@ -43,7 +43,7 @@ publish_docs:
     tags:
         - python
     script:
-        - publish_docs docs/_build/html UFalcon
+        - publish_docs docs/_build/ UFalcon
         - create_index_html
     when: manual
     stage: publish_docs
