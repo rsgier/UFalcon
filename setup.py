@@ -41,7 +41,8 @@ except IOError:
     history = ""
 
 requires = ['numpy',
-            'scipy']  # during runtime
+            'scipy',
+            'healpy']  # during runtime
 tests_require = ['pytest>=2.3',
                  'PyCosmo',
                  'mock']  # for testing

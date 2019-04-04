@@ -1,112 +1,107 @@
+import os
 import numpy as np
 import healpy as hp
-import os
 from UFalcon import utils
 
 
-def pos2ang(z_input, deltaz, path, boxsize, cosmo):
+def pos2ang(path, z_low, delta_z, boxsize, cosmo):
     """
-    Iterates over all binary files within the desired folder and imports the particles within that file. The position of the particles are then stored in 4 array labeled by "a,b,c,d".
-    The positions are then transformed to spherical coordinated (phi, theta) and projected onto different planes. The analysis is perfomed in comoving distances, i.g. in [Mpc*a]
-    :return dic: defined dictionary dic with values corresponding to angular position on the planes, e.g. "theta_6Gpc_3_a"
+    Reads in particle positions stored in a binary file and keeps only those particle within a given redshift shell.
+    Returns the kept particle positions as healpix theta- and phi-coordinates.
+    :param path: path to binary file holding particle positions
+    :param z_low: lower limit of redshift shell
+    :param delta_z: thickness of redshift shell
+    :param boxsize: size of the box
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :return: theta- and phi-coordinates of particles inside the shell
     """
-
-    dic = {}
 
     as_float = np.fromfile(path, dtype=np.float32, count=-1)
-    # same data, but different interpretation of bit patterns
-    as_uint = as_float.view(np.uint32)
+    as_uint = as_float.view(np.uint32)  # same data, but different interpretation of bit patterns
 
     block_start = 0
     data_blocks = []
 
     while block_start < len(as_uint):
-
-        #print("block header", as_uint[block_start: block_start + 4])
         block_size = as_uint[block_start + 1] * 7
         data_block = as_float[block_start + 4: block_start + 4 + block_size].reshape(-1, 7)
         data_blocks.append(data_block)
-
-        #print("block has shape", data_block.shape)
-
         block_start = block_start + block_size + 5  # 4 uint32 before the block and 1 afterwards
 
     data = np.vstack(data_blocks)
 
-    pos_x = data[:,0] / cosmo.params.h
-    pos_y = data[:,1] / cosmo.params.h
-    pos_z = data[:,2] / cosmo.params.h
+    pos_x = data[:, 0] / cosmo.params.h
+    pos_y = data[:, 1] / cosmo.params.h
+    pos_z = data[:, 2] / cosmo.params.h
 
     origin = boxsize * 500.0
 
     r = np.sqrt((pos_x - origin) ** 2 + (pos_y - origin) ** 2 + (pos_z - origin) ** 2)
-    min_r, max_r = np.min(r), np.max(r)
+    min_r = np.amin(r)
+    max_r = np.amax(r)
 
-    if (max_r < utils.comoving_distance(z_input, z_input + deltaz, cosmo)) or (min_r > utils.comoving_distance(z_input, z_input + deltaz, cosmo)):
-            dic[1] = np.array([], np.float32)
-            dic[2] = np.array([], np.float32)
+    if (max_r < utils.comoving_distance(z_low, z_low + delta_z, cosmo)) or \
+            (min_r > utils.comoving_distance(z_low, z_low + delta_z, cosmo)):
+        theta = np.array([], np.float32)
+        phi = np.array([], np.float32)
+
     else:
-        shell = np.where(np.logical_and(r > utils.comoving_distance(z_input, z_input + deltaz, cosmo), r <= utils.comoving_distance(z_input, z_input + deltaz, cosmo)))[0]
-        shell_x = (pos_x - origin)[shell]
-        shell_y = (pos_y - origin)[shell]
-        shell_z = (pos_z - origin)[shell]
+        shell = np.where(np.logical_and(r > utils.comoving_distance(z_low, z_low + delta_z, cosmo),
+                                        r <= utils.comoving_distance(z_low, z_low + delta_z, cosmo)))[0]
+        shell_x = pos_x[shell] - origin
+        shell_y = pos_y[shell] - origin
+        shell_z = pos_z[shell] - origin
 
-        dic[1] = np.pi / 2 - np.arctan2(shell_z, (np.sqrt(shell_x ** 2 + shell_y ** 2)))
-        dic[2] = np.pi + np.arctan2(shell_y, shell_x)
-        del shell_x, shell_y, shell_z
+        theta = np.pi / 2 - np.arctan2(shell_z, (np.sqrt(shell_x ** 2 + shell_y ** 2)))
+        phi = np.pi + np.arctan2(shell_y, shell_x)
 
-    del pos_x, pos_y, pos_z
+    return theta, phi
 
-    return dic
 
-def n_part(dic, NSIDE):
+def n_part(theta, phi, nside):
     """
-    Returns an array of length Npix with the number of particles per pixel.
-    :param dic: dictionary containing x,y,z positions
-    :param NSIDE: resolution of the healpy map
-    :return: array of length Npix, whose elements correspond to the number of particles in that pixel
+    Returns a healpix map with side length nside with particle counts according to particle input positions
+    (theta, phi).
+    Returns an array of length hp.nside2npix(nside) with the number of particles per pixel.
+    :param theta: healpix theta-coordinate
+    :param phi: healpix phi-coordinate
+    :param nside: resolution of the healpix map
+    :return: healpix map with number of particles as pixel values
     """
-    arr_theta = dic[1]
-    arr_phi = dic[2]
+    particle_counts = np.zeros(hp.nside2npix(nside))
+    pix_ind = hp.ang2pix(nside, theta, phi, nest=False)
+    pix_binned = np.bincount(pix_ind)
+    particle_counts[:len(pix_binned)] = pix_binned
+    return particle_counts
 
-    arr_theta = arr_theta[arr_theta != 0]
-    arr_phi = arr_phi[arr_phi != 0]
 
-    pix = hp.ang2pix(NSIDE, arr_theta, arr_phi, nest=False)
-    pix_binned = np.bincount(pix)
-    pixels = np.zeros(Npix)
-    pixels[:len(pix_binned)] = pix_binned
-
-    return pixels
-
-def npart_map(z_input, deltaz, path):
-
-    a = int(z_input)
-    b = str(round(z_input - int(z_input), 2))[2:]
-
-    if len(b) == 1:
-        z_file = '{}p{}00'.format(a, b)
-    else:
-        z_file = '{}p{}0'.format(a, b)
+def npart_map(dirpath, z_low, delta_z, boxsize, cosmo, nside):
+    """
+    Reads in all files in a given directory and extracts those particles within a given redshift shell.
+    :param dirpath: path of directory, assumed to only contain binary files holding particle positions
+    :param z_low: lower limit of redshift shell
+    :param delta_z: thickness of redshift shell
+    :param boxsize: size of the box
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :param nside: resolution of the healpix map holding the particle counts
+    :return: healpix map with particle counts inside the shell
+    """
 
     n_part_total = None
 
-    for filename in os.listdir(path):
-        filepath = os.path.join(z_input, deltaz, path, filename)
+    for filename in os.listdir(dirpath):
 
-        if os.path.exists(filepath):
-            print('extracting particles from: {}'.format(filepath))
+        filepath = os.path.join(dirpath, filename)
 
-            ang = pos2ang(z_input, filepath, cosmo)
+        print('extracting particles from: {}'.format(filepath))
 
-            if n_part_total is None:
-                n_part_total = n_part(ang, NSIDE)
-            else:
-                n_part_total += n_part(ang, NSIDE)
+        theta, phi = pos2ang(filepath, z_low, delta_z, boxsize, cosmo)
+
+        if n_part_total is None:
+            n_part_total = n_part(theta, phi, nside)
         else:
-            pass
+            n_part_total += n_part(theta, phi, nside)
 
-            print('shell construction is finished for z={}'.format(z_input))
+    print('shell construction is finished for z={}'.format(z_low))
 
     return n_part_total
-

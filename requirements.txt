@@ -11,7 +11,8 @@ coverage
 sphinx-pynpoint-theme
 tox
 mock
+PyCosmo
 
 numpy
 scipy
-PyCosmo
+healpy
