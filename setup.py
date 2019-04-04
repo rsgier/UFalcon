@@ -40,8 +40,10 @@ try:
 except IOError:
     history = ""
 
-requires = ['numpy']  # during runtime
-tests_require = ['pytest>=2.3']  # for testing
+requires = ['numpy',
+            'scipy']  # during runtime
+tests_require = ['pytest>=2.3',
+                 'PyCosmo']  # for testing
 
 PACKAGE_PATH = os.path.abspath(os.path.join(__file__, os.pardir))
 
