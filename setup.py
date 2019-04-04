@@ -43,7 +43,8 @@ except IOError:
 requires = ['numpy',
             'scipy']  # during runtime
 tests_require = ['pytest>=2.3',
-                 'PyCosmo']  # for testing
+                 'PyCosmo',
+                 'mock']  # for testing
 
 PACKAGE_PATH = os.path.abspath(os.path.join(__file__, os.pardir))
 
