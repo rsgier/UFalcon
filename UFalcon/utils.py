@@ -1,3 +1,17 @@
+import numpy as np
+
+
+def e(z, cosmo):
+    """
+    Computes the function E(z) = (Omega_r * (1 + z)^4 + Omega_m * (1 + z)^3 + Omega_k * (1 + z)^2 + Omega_Lambda)^(1/2).
+    :param z: redshift
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :return: E(z)
+    """
+    ez = np.sqrt(cosmo.params.omega_m * (1 + z) ** 3 + cosmo.params.omega_l)
+    return ez
+
+
 def comoving_distance(z_low, z_up, cosmo):
     """
     Computes the comoving distance between two redshifts.
