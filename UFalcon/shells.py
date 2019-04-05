@@ -58,7 +58,7 @@ def pos2ang(path, z_low, delta_z, boxsize, cosmo):
     return theta, phi
 
 
-def n_part(theta, phi, nside):
+def ang2map(theta, phi, nside):
     """
     Returns a healpix map with side length nside with particle counts according to particle input positions
     (theta, phi).
@@ -75,7 +75,7 @@ def n_part(theta, phi, nside):
     return particle_counts
 
 
-def npart_map(dirpath, z_low, delta_z, boxsize, cosmo, nside):
+def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside):
     """
     Reads in all files in a given directory and extracts those particles within a given redshift shell.
     :param dirpath: path of directory, assumed to only contain binary files holding particle positions
@@ -99,9 +99,9 @@ def npart_map(dirpath, z_low, delta_z, boxsize, cosmo, nside):
         theta, phi = pos2ang(filepath, z_low, delta_z, boxsize, cosmo)
 
         if n_part_total is None:
-            n_part_total = n_part(theta, phi, nside)
+            n_part_total = ang2map(theta, phi, nside)
         else:
-            n_part_total += n_part(theta, phi, nside)
+            n_part_total += ang2map(theta, phi, nside)
 
     print('shell construction is finished for z={}'.format(z_low))
 
