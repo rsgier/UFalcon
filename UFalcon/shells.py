@@ -88,7 +88,7 @@ def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside):
     """
 
     n_part_total = None
-    filelist = list(os.listdir(dirpath))
+    filelist = list(filter(lambda fn: os.path.splitext(fn)[1] != '.info', os.listdir(dirpath)))
 
     for i, filename in enumerate(filelist):
 
