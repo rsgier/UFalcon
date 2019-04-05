@@ -104,3 +104,20 @@ class Dirac:
                utils.dimensionless_comoving_distance(x, self.z_source, cosmo) * \
                (1 + x) / \
                utils.e(x, cosmo)
+
+
+def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
+    """
+    Computes the prefactor to transform from number of particles to convergence, see https://arxiv.org/abs/0807.3651,
+    eq. (A.1).
+    :param n_pix: number of healpix pixels used
+    :param n_particles: number of particles
+    :param boxsize: size of the box in Gigaparsec
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :return: 
+    """
+    convergence_factor = (3.0 * cosmo.params.omega_m / 2.0) * \
+                         (n_pix / (4.0 * np.pi)) * \
+                         (cosmo.params.H0 / cosmo.params.c) ** 3 * \
+                         (boxsize * 1000.0) ** 3 / n_particles
+    return convergence_factor

@@ -66,3 +66,17 @@ def test_continuous_to_dirac(cosmo):
         w_cont = cont_weights(z_low, z_up, cosmo)
 
         assert (w_dirac - w_cont) / w_cont < 0.01
+
+
+def test_kappa_prefactor(cosmo):
+    """
+    Test the computation of the prefactor to convert to convergence.
+    """
+    n_pix = 17395392
+    n_particles = 1024 ** 3
+    boxsize = 6
+    cosmo.set(omega_m=0.3)
+    cosmo.set(h=0.7)
+    f = lensing_weights.kappa_prefactor(n_pix, n_particles, boxsize, cosmo)
+    assert '{:.18f}'.format(f) == str(0.001595227993431627)
+
