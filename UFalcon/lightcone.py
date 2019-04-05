@@ -6,7 +6,7 @@ import os
 
 from UFalcon import utils
 
-def kappa_map(path2shells, output_name, weights, Np, NSIDE, z_low, z_up, deltaz):
+def kappa_map(path2shells, output_name, weights, Np, NSIDE, z_low, z_up, deltaz, cosmo):
 
     Nsim = Np ** 3
     """no. of particles in the simulation"""
