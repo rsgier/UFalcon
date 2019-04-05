@@ -11,7 +11,7 @@ def pos2ang(path, z_low, delta_z, boxsize, cosmo):
     :param path: path to binary file holding particle positions
     :param z_low: lower limit of redshift shell
     :param delta_z: thickness of redshift shell
-    :param boxsize: size of the box
+    :param boxsize: size of the box in Gigaparsec
     :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
     :return: theta- and phi-coordinates of particles inside the shell
     """
@@ -81,19 +81,20 @@ def npart_map(dirpath, z_low, delta_z, boxsize, cosmo, nside):
     :param dirpath: path of directory, assumed to only contain binary files holding particle positions
     :param z_low: lower limit of redshift shell
     :param delta_z: thickness of redshift shell
-    :param boxsize: size of the box
+    :param boxsize: size of the box in Gigaparsec
     :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
     :param nside: resolution of the healpix map holding the particle counts
     :return: healpix map with particle counts inside the shell
     """
 
     n_part_total = None
+    filelist = list(os.listdir(dirpath))
 
-    for filename in os.listdir(dirpath):
+    for i, filename in enumerate(filelist):
 
         filepath = os.path.join(dirpath, filename)
 
-        print('extracting particles from: {}'.format(filepath))
+        print('extracting particles from file {} / {}, path: {}'.format(i + 1, len(filelist), filepath))
 
         theta, phi = pos2ang(filepath, z_low, delta_z, boxsize, cosmo)
 
