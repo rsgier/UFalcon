@@ -8,61 +8,61 @@ from UFalcon.utils import comoving_distance
 
 def test_pos2ang():
     """
-
-    :return:
+    Test the reading of a binary file and the selection of the particles inside a given redshift shell.
     """
 
-    n = 40
-    data = np.random.random((n, 7)).astype(np.float32)
-    cosmo = PyCosmo.Cosmo()
-
-    np.random.seed(10)
-    pos_x = np.random.rand(n) * 2000.0
-    pos_y = np.random.rand(n) * 2000.0
-    pos_z = np.random.rand(n) * 2000.0
-
+    n_particles = 40
     boxsize = 2.0
+    origin = boxsize * 500.0
     z_low = 0.105
     delta_z = 0.09
+    cosmo = PyCosmo.Cosmo()
 
-    origin = boxsize * 500.0
+    # create test data
+    np.random.seed(10)
+    data = np.random.rand(n_particles, 7).astype(np.float32) * 2000.0
 
-    r = np.sqrt((pos_x - origin) ** 2 + (pos_y - origin) ** 2 + (pos_z - origin) ** 2)
-    min_r = np.amin(r)
-    max_r = np.amax(r)
-
-    if (max_r < comoving_distance(0.0, z_low, cosmo)) or \
-            (min_r > comoving_distance(0.0, z_low + delta_z, cosmo)):
-        theta = np.array([], np.float32)
-        phi = np.array([], np.float32)
-
-    else:
-        shell = np.where(np.logical_and(r > comoving_distance(0.0, z_low, cosmo),
-                                        r <= comoving_distance(0.0, z_low + delta_z, cosmo)))[0]
-        shell_x = pos_x[shell] - origin
-        shell_y = pos_y[shell] - origin
-        shell_z = pos_z[shell] - origin
-
-        theta = np.pi / 2 - np.arctan2(shell_z, (np.sqrt(shell_x ** 2 + shell_y ** 2)))
-        phi = np.pi + np.arctan2(shell_y, shell_x)
-
-    data[:, 0] = pos_x
-    data[:, 1] =  pos_y
-    data[:, 2] = pos_z
-
-    block = np.zeros(4 + 7 * n, dtype=np.float32)
+    # transform to binary format
+    block = np.zeros(4 + 7 * n_particles, dtype=np.float32)
     block_int = block.view(np.uint32)
     block_int[:] = 0
+    block_int[1] = n_particles
+    block[4:] = data.reshape(-1, 1).flatten() * cosmo.params.h
 
-    block_int[1] = n
-    block[4:] = data.reshape(-1, 1).flatten()
+    # find particles inside shell
+    theta_in = []
+    phi_in = []
+    com_low = comoving_distance(0, z_low, cosmo)
+    com_up = comoving_distance(0, z_low + delta_z, cosmo)
+
+    for ip in range(n_particles):
+
+        x = data[ip, 0] - origin
+        y = data[ip, 1] - origin
+        z = data[ip, 2] - origin
+
+        if com_low < np.sqrt(x ** 2 + y ** 2 + z ** 2) <= com_up:
+            theta_in.append(np.pi / 2 - np.arctan2(z, (np.sqrt(x ** 2 + y ** 2))))
+            phi_in.append(np.pi + np.arctan2(y, x))
+
+    # test
+    with mock.patch('numpy.fromfile') as fromfile:
+        fromfile.return_value = block
+
+        theta_out, phi_out = shells.pos2ang(None, z_low, delta_z, boxsize, cosmo)
+
+        assert np.allclose(theta_in, theta_out)
+        assert np.allclose(phi_in, phi_out)
+
+    # test pathological case where there are no particles inside the shell
+    block[4:] *= 0  # all particles at the origin
 
     with mock.patch('numpy.fromfile') as fromfile:
         fromfile.return_value = block
 
-        shells.pos2ang(None, 0.105, 0.09, 2.0, cosmo)
-
-
+        theta_out, phi_out = shells.pos2ang(None, z_low, delta_z, boxsize, cosmo)
+        assert theta_out.size == 0
+        assert phi_out.size == 0
 
 
 def create_random_map(nside):

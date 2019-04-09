@@ -16,6 +16,7 @@ def pos2ang(path, z_low, delta_z, boxsize, cosmo):
     :return: theta- and phi-coordinates of particles inside the shell
     """
 
+    # read in binary data
     as_float = np.fromfile(path, dtype=np.float32, count=-1)
     as_uint = as_float.view(np.uint32)  # same data, but different interpretation of bit patterns
 
@@ -30,30 +31,25 @@ def pos2ang(path, z_low, delta_z, boxsize, cosmo):
 
     data = np.vstack(data_blocks)
 
+    # compute radial comoving positions
     pos_x = data[:, 0] / cosmo.params.h
     pos_y = data[:, 1] / cosmo.params.h
     pos_z = data[:, 2] / cosmo.params.h
 
     origin = boxsize * 500.0
-
     r = np.sqrt((pos_x - origin) ** 2 + (pos_y - origin) ** 2 + (pos_z - origin) ** 2)
-    min_r = np.amin(r)
-    max_r = np.amax(r)
 
-    if (max_r < utils.comoving_distance(0.0, z_low, cosmo)) or \
-            (min_r > utils.comoving_distance(0.0, z_low + delta_z, cosmo)):
-        theta = np.array([], np.float32)
-        phi = np.array([], np.float32)
+    # select particles inside shell
+    select_shell = (r > utils.comoving_distance(0.0, z_low, cosmo)) & \
+                   (r <= utils.comoving_distance(0.0, z_low + delta_z, cosmo))
 
-    else:
-        shell = np.where(np.logical_and(r > utils.comoving_distance(0.0, z_low, cosmo),
-                                        r <= utils.comoving_distance(0.0, z_low + delta_z, cosmo)))[0]
-        shell_x = pos_x[shell] - origin
-        shell_y = pos_y[shell] - origin
-        shell_z = pos_z[shell] - origin
+    shell_x = pos_x[select_shell] - origin
+    shell_y = pos_y[select_shell] - origin
+    shell_z = pos_z[select_shell] - origin
 
-        theta = np.pi / 2 - np.arctan2(shell_z, (np.sqrt(shell_x ** 2 + shell_y ** 2)))
-        phi = np.pi + np.arctan2(shell_y, shell_x)
+    # convert to angles
+    theta = np.pi / 2 - np.arctan2(shell_z, (np.sqrt(shell_x ** 2 + shell_y ** 2)))
+    phi = np.pi + np.arctan2(shell_y, shell_x)
 
     return theta, phi
 
