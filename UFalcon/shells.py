@@ -40,14 +40,14 @@ def pos2ang(path, z_low, delta_z, boxsize, cosmo):
     min_r = np.amin(r)
     max_r = np.amax(r)
 
-    if (max_r < utils.comoving_distance(z_low, z_low + delta_z, cosmo)) or \
-            (min_r > utils.comoving_distance(z_low, z_low + delta_z, cosmo)):
+    if (max_r < utils.comoving_distance(0.0, z_low, cosmo)) or \
+            (min_r > utils.comoving_distance(0.0, z_low + delta_z, cosmo)):
         theta = np.array([], np.float32)
         phi = np.array([], np.float32)
 
     else:
-        shell = np.where(np.logical_and(r > utils.comoving_distance(z_low, z_low + delta_z, cosmo),
-                                        r <= utils.comoving_distance(z_low, z_low + delta_z, cosmo)))[0]
+        shell = np.where(np.logical_and(r > utils.comoving_distance(0.0, z_low, cosmo),
+                                        r <= utils.comoving_distance(0.0, z_low + delta_z, cosmo)))[0]
         shell_x = pos_x[shell] - origin
         shell_y = pos_y[shell] - origin
         shell_z = pos_z[shell] - origin

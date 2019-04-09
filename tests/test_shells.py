@@ -1,7 +1,68 @@
 import numpy as np
 import healpy as hp
 import mock
+import PyCosmo
 from UFalcon import shells
+from UFalcon.utils import comoving_distance
+
+
+def test_pos2ang():
+    """
+
+    :return:
+    """
+
+    n = 40
+    data = np.random.random((n, 7)).astype(np.float32)
+    cosmo = PyCosmo.Cosmo()
+
+    np.random.seed(10)
+    pos_x = np.random.rand(n) * 2000.0
+    pos_y = np.random.rand(n) * 2000.0
+    pos_z = np.random.rand(n) * 2000.0
+
+    boxsize = 2.0
+    z_low = 0.105
+    delta_z = 0.09
+
+    origin = boxsize * 500.0
+
+    r = np.sqrt((pos_x - origin) ** 2 + (pos_y - origin) ** 2 + (pos_z - origin) ** 2)
+    min_r = np.amin(r)
+    max_r = np.amax(r)
+
+    if (max_r < comoving_distance(0.0, z_low, cosmo)) or \
+            (min_r > comoving_distance(0.0, z_low + delta_z, cosmo)):
+        theta = np.array([], np.float32)
+        phi = np.array([], np.float32)
+
+    else:
+        shell = np.where(np.logical_and(r > comoving_distance(0.0, z_low, cosmo),
+                                        r <= comoving_distance(0.0, z_low + delta_z, cosmo)))[0]
+        shell_x = pos_x[shell] - origin
+        shell_y = pos_y[shell] - origin
+        shell_z = pos_z[shell] - origin
+
+        theta = np.pi / 2 - np.arctan2(shell_z, (np.sqrt(shell_x ** 2 + shell_y ** 2)))
+        phi = np.pi + np.arctan2(shell_y, shell_x)
+
+    data[:, 0] = pos_x
+    data[:, 1] =  pos_y
+    data[:, 2] = pos_z
+
+    block = np.zeros(4 + 7 * n, dtype=np.float32)
+    block_int = block.view(np.uint32)
+    block_int[:] = 0
+
+    block_int[1] = n
+    block[4:] = data.reshape(-1, 1).flatten()
+
+    with mock.patch('numpy.fromfile') as fromfile:
+        fromfile.return_value = block
+
+        shells.pos2ang(None, 0.105, 0.09, 2.0, cosmo)
+
+
 
 
 def create_random_map(nside):
