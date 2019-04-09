@@ -75,7 +75,7 @@ def ang2map(theta, phi, nside):
     return particle_counts
 
 
-def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside):
+def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside, verbose=False):
     """
     Reads in all files in a given directory and extracts those particles within a given redshift shell.
     :param dirpath: path of directory, assumed to only contain binary files holding particle positions
@@ -84,6 +84,7 @@ def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside):
     :param boxsize: size of the box in Gigaparsec
     :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
     :param nside: resolution of the healpix map holding the particle counts
+    :param verbose: whether to information for each file read in
     :return: healpix map with particle counts inside the shell
     """
 
@@ -94,7 +95,8 @@ def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside):
 
         filepath = os.path.join(dirpath, filename)
 
-        print('extracting particles from file {} / {}, path: {}'.format(i + 1, len(filelist), filepath))
+        if verbose:
+            print('extracting particles from file {} / {}, path: {}'.format(i + 1, len(filelist), filepath))
 
         theta, phi = pos2ang(filepath, z_low, delta_z, boxsize, cosmo)
 
