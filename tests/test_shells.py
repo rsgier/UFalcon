@@ -1,9 +1,69 @@
 import numpy as np
 import healpy as hp
 import mock
+import pytest
 import PyCosmo
 from UFalcon import shells
 from UFalcon.utils import comoving_distance
+
+
+def create_random_map(nside):
+
+    npix = hp.nside2npix(nside)
+    counts_map = np.zeros(npix)
+    pix_ind = np.random.choice(npix, size=npix, replace=True)
+
+    for i in pix_ind:
+        counts_map[i] += 1
+
+    return pix_ind, counts_map
+
+
+def test_read_lpicola():
+
+    n_particles = 40
+    boxsize = 2.0
+    h = 0.7
+
+    # create test data
+    data = np.random.rand(n_particles, 7).astype(np.float32) * boxsize * 1000
+
+    # transform to binary format
+    block = np.zeros(4 + 7 * n_particles, dtype=np.float32)
+    block_int = block.view(np.uint32)
+    block_int[:] = 0
+    block_int[1] = n_particles
+    block[4:] = data.reshape(-1, 1).flatten()
+
+    # test
+    with mock.patch('numpy.fromfile') as fromfile:
+        fromfile.return_value = block
+
+        x, y, z = shells.read_lpicola(None, h, boxsize)
+
+    assert np.array_equal(x, (data[:, 0] / h) - boxsize * 500)
+    assert np.array_equal(y, (data[:, 1] / h) - boxsize * 500)
+    assert np.array_equal(z, (data[:, 2] / h) - boxsize * 500)
+
+
+def test_read_pkdgrav():
+
+    n_particles = 40
+    boxsize = 2.0
+    h = 0.7
+
+    # create test data
+    data = np.random.rand(n_particles, 7).astype(np.float32)
+
+    # test
+    with mock.patch('numpy.fromfile') as fromfile:
+        fromfile.return_value = data.ravel()
+
+        x, y, z = shells.read_pkdgrav(None, h, boxsize)
+
+    assert np.array_equal(x, data[:, 0])  # this works because read_pkdgrav modifies data in-place
+    assert np.array_equal(y, data[:, 1])
+    assert np.array_equal(z, data[:, 2])
 
 
 def test_pos2ang():
@@ -20,14 +80,7 @@ def test_pos2ang():
 
     # create test data
     np.random.seed(10)
-    data = np.random.rand(n_particles, 7).astype(np.float32) * 2000.0
-
-    # transform to binary format
-    block = np.zeros(4 + 7 * n_particles, dtype=np.float32)
-    block_int = block.view(np.uint32)
-    block_int[:] = 0
-    block_int[1] = n_particles
-    block[4:] = data.reshape(-1, 1).flatten() * cosmo.params.h
+    data = np.random.rand(n_particles, 3).astype(np.float32) * boxsize * 1000 - origin
 
     # find particles inside shell
     theta_in = []
@@ -37,17 +90,17 @@ def test_pos2ang():
 
     for ip in range(n_particles):
 
-        x = data[ip, 0] - origin
-        y = data[ip, 1] - origin
-        z = data[ip, 2] - origin
+        x = data[ip, 0]
+        y = data[ip, 1]
+        z = data[ip, 2]
 
         if com_low < np.sqrt(x ** 2 + y ** 2 + z ** 2) <= com_up:
             theta_in.append(np.pi / 2 - np.arctan2(z, (np.sqrt(x ** 2 + y ** 2))))
             phi_in.append(np.pi + np.arctan2(y, x))
 
     # test
-    with mock.patch('numpy.fromfile') as fromfile:
-        fromfile.return_value = block
+    with mock.patch('UFalcon.shells.read_lpicola') as read_lpicola:
+        read_lpicola.return_value = data[:, 0], data[:, 1], data[:, 2]
 
         theta_out, phi_out = shells.pos2ang(None, z_low, delta_z, boxsize, cosmo)
 
@@ -55,26 +108,16 @@ def test_pos2ang():
         assert np.allclose(phi_in, phi_out)
 
     # test pathological case where there are no particles inside the shell
-    block[4:] *= 0  # all particles at the origin
-
-    with mock.patch('numpy.fromfile') as fromfile:
-        fromfile.return_value = block
+    with mock.patch('UFalcon.shells.read_lpicola') as read_lpicola:
+        read_lpicola.return_value = data[:, 0] * 0, data[:, 1] * 0, data[:, 2] * 0
 
         theta_out, phi_out = shells.pos2ang(None, z_low, delta_z, boxsize, cosmo)
         assert theta_out.size == 0
         assert phi_out.size == 0
 
-
-def create_random_map(nside):
-
-    npix = hp.nside2npix(nside)
-    counts_map = np.zeros(npix)
-    pix_ind = np.random.choice(npix, size=npix, replace=True)
-
-    for i in pix_ind:
-        counts_map[i] += 1
-
-    return pix_ind, counts_map
+    # test error raising
+    with pytest.raises(ValueError):
+        shells.pos2ang(None, z_low, delta_z, boxsize, cosmo, file_format='wrong')
 
 
 def test_ang2map():
@@ -107,7 +150,7 @@ def test_construct_shell():
         pix_inds.append(pix_ind)
         counts_map += counts
 
-    def pos2ang_side_effect(*args):
+    def pos2ang_side_effect(*args, **kwargs):
         ind = int(args[0])
         return hp.pix2ang(nside, pix_inds[ind])
 
@@ -117,3 +160,7 @@ def test_construct_shell():
 
         with mock.patch('UFalcon.shells.pos2ang', side_effect=pos2ang_side_effect):
             assert np.array_equal(shells.construct_shell('', None, None, None, None, nside), counts_map)
+
+    # test error raising
+    with pytest.raises(ValueError):
+        shells.construct_shell('', None, None, None, None, nside, file_format='wrong')

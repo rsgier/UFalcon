@@ -4,16 +4,13 @@ import healpy as hp
 from UFalcon import utils
 
 
-def pos2ang(path, z_low, delta_z, boxsize, cosmo):
+def read_lpicola(path, h, boxsize):
     """
-    Reads in particle positions stored in a binary file and keeps only those particle within a given redshift shell.
-    Returns the kept particle positions as healpix theta- and phi-coordinates.
-    :param path: path to binary file holding particle positions
-    :param z_low: lower limit of redshift shell
-    :param delta_z: thickness of redshift shell
+    Reads in a binary data file produced by L-Picola.
+    :param path: path to file
+    :param h: dimensionless Hubble parameter
     :param boxsize: size of the box in Gigaparsec
-    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
-    :return: theta- and phi-coordinates of particles inside the shell
+    :return: 3-tuple containing (x, y, z) particle positions
     """
 
     # read in binary data
@@ -31,21 +28,57 @@ def pos2ang(path, z_low, delta_z, boxsize, cosmo):
 
     data = np.vstack(data_blocks)
 
-    # compute radial comoving positions
-    pos_x = data[:, 0] / cosmo.params.h
-    pos_y = data[:, 1] / cosmo.params.h
-    pos_z = data[:, 2] / cosmo.params.h
-
+    # transform to Mpc and subtract origin
     origin = boxsize * 500.0
-    r = np.sqrt((pos_x - origin) ** 2 + (pos_y - origin) ** 2 + (pos_z - origin) ** 2)
+    data[:, :3] /= h
+    data[:, :3] -= origin
+
+    return data[:, 0], data[:, 1], data[:, 2]
+
+
+def read_pkdgrav(path, h, boxsize):
+    """
+    Reads in a binary data file produced by L-Picola.
+    :param path: path to file
+    :param h: dimensionless Hubble parameter
+    :param boxsize: size of the box in Gigaparsec
+    :return: 3-tuple containing (x, y, z) particle positions
+    """
+    data = np.fromfile(path, dtype=np.float32, count=-1).reshape(-1, 7)
+    data[:, :3] *= boxsize * 1000 / h  # transforms to Mpc
+    return data[:, 0], data[:, 1], data[:, 2]
+
+
+def pos2ang(path, z_low, delta_z, boxsize, cosmo, file_format='l-picola'):
+    """
+    Reads in particle positions stored in a binary file and keeps only those particle within a given redshift shell.
+    Returns the kept particle positions as healpix theta- and phi-coordinates.
+    :param path: path to binary file holding particle positions
+    :param z_low: lower limit of redshift shell
+    :param delta_z: thickness of redshift shell
+    :param boxsize: size of the box in Gigaparsec
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :param file_format: data format, either l-picola or pkdgrav
+    :return: theta- and phi-coordinates of particles inside the shell
+    """
+
+    if file_format == 'l-picola':
+        pos_x, pos_y, pos_z = read_lpicola(path, cosmo.params.h, boxsize)
+    elif file_format == 'pkdgrav':
+        pos_x, pos_y, pos_z = read_pkdgrav(path, cosmo.params.h, boxsize)
+    else:
+        raise ValueError('Data format {} is not supported, choose either "l-picola" or "pkdgrav"')
+
+    # compute comoving radius
+    r = np.sqrt(pos_x ** 2 + pos_y ** 2 + pos_z ** 2)
 
     # select particles inside shell
     select_shell = (r > utils.comoving_distance(0.0, z_low, cosmo)) & \
                    (r <= utils.comoving_distance(0.0, z_low + delta_z, cosmo))
 
-    shell_x = pos_x[select_shell] - origin
-    shell_y = pos_y[select_shell] - origin
-    shell_z = pos_z[select_shell] - origin
+    shell_x = pos_x[select_shell]
+    shell_y = pos_y[select_shell]
+    shell_z = pos_z[select_shell]
 
     # convert to angles
     theta = np.pi / 2 - np.arctan2(shell_z, (np.sqrt(shell_x ** 2 + shell_y ** 2)))
@@ -71,7 +104,7 @@ def ang2map(theta, phi, nside):
     return particle_counts
 
 
-def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside, verbose=False):
+def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside, file_format='l-picola', verbose=False):
     """
     Reads in all files in a given directory and extracts those particles within a given redshift shell.
     :param dirpath: path of directory, assumed to only contain binary files holding particle positions
@@ -80,12 +113,19 @@ def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside, verbose=Fals
     :param boxsize: size of the box in Gigaparsec
     :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
     :param nside: resolution of the healpix map holding the particle counts
+    :param file_format: data format, either l-picola or pkdgrav
     :param verbose: whether to information for each file read in
     :return: healpix map with particle counts inside the shell
     """
 
     n_part_total = None
-    filelist = list(filter(lambda fn: os.path.splitext(fn)[1] != '.info', os.listdir(dirpath)))
+
+    if file_format == 'l-picola':
+        filelist = list(filter(lambda fn: os.path.splitext(fn)[1] != '.info', os.listdir(dirpath)))
+    elif file_format == 'pkdgrav':
+        filelist = list(filter(lambda fn: os.path.splitext(fn)[1] == '.out', os.listdir(dirpath)))
+    else:
+        raise ValueError('Data format {} is not supported, choose either "l-picola" or "pkdgrav"')
 
     for i, filename in enumerate(filelist):
 
@@ -94,13 +134,14 @@ def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside, verbose=Fals
         if verbose:
             print('extracting particles from file {} / {}, path: {}'.format(i + 1, len(filelist), filepath))
 
-        theta, phi = pos2ang(filepath, z_low, delta_z, boxsize, cosmo)
+        theta, phi = pos2ang(filepath, z_low, delta_z, boxsize, cosmo, file_format=file_format)
 
         if n_part_total is None:
             n_part_total = ang2map(theta, phi, nside)
         else:
             n_part_total += ang2map(theta, phi, nside)
 
-    print('shell construction is finished for z={}'.format(z_low))
+    if verbose:
+        print('shell construction is finished for z={}'.format(z_low))
 
     return n_part_total
