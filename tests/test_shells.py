@@ -71,6 +71,13 @@ def test_read_pkdgrav():
     assert np.array_equal(y, data[:, 1])
     assert np.array_equal(z, data[:, 2])
 
+    # test empty file
+    np.ones((0, 7), dtype=np.float32).tofile(path)
+    x, y, z = shells.read_pkdgrav(path, h, boxsize)
+    assert x.size == 0
+    assert y.size == 0
+    assert z.size == 0
+
     # remove test file
     os.remove(path)
 
