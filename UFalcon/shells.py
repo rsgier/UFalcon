@@ -36,11 +36,10 @@ def read_lpicola(path, h, boxsize):
     return data[:, 0], data[:, 1], data[:, 2]
 
 
-def read_pkdgrav(path, h, boxsize, n_rows_per_block=int(1e6)):
+def read_pkdgrav(path, boxsize, n_rows_per_block=int(1e6)):
     """
     Reads in a binary data file produced by L-Picola.
     :param path: path to file
-    :param h: dimensionless Hubble parameter
     :param boxsize: size of the box in Gigaparsec
     :param n_rows_per_block: number of rows to read in one block, allows to limit memory consumption for large files
     :return: 3-tuple containing (x, y, z) particle positions
@@ -67,7 +66,7 @@ def read_pkdgrav(path, h, boxsize, n_rows_per_block=int(1e6)):
             n_rows_in += block.shape[0]
 
     # transforms to Mpc
-    data *= boxsize * 1000 / h
+    data *= boxsize * 1000
 
     return data[:, 0], data[:, 1], data[:, 2]
 
@@ -88,7 +87,7 @@ def pos2ang(path, z_low, delta_z, boxsize, cosmo, file_format='l-picola'):
     if file_format == 'l-picola':
         pos_x, pos_y, pos_z = read_lpicola(path, cosmo.params.h, boxsize)
     elif file_format == 'pkdgrav':
-        pos_x, pos_y, pos_z = read_pkdgrav(path, cosmo.params.h, boxsize)
+        pos_x, pos_y, pos_z = read_pkdgrav(path, boxsize)
     else:
         raise ValueError('Data format {} is not supported, choose either "l-picola" or "pkdgrav"')
 

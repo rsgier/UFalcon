@@ -51,7 +51,6 @@ def test_read_pkdgrav():
 
     n_particles = 40
     boxsize = 2.0
-    h = 0.7
     path = 'test.out'
 
     # create test data and write to disk
@@ -59,21 +58,21 @@ def test_read_pkdgrav():
     data.tofile(path)
 
     # test
-    data *= boxsize * 1000 / h
+    data *= boxsize * 1000
 
-    x, y, z = shells.read_pkdgrav(path, h, boxsize, n_rows_per_block=15)
+    x, y, z = shells.read_pkdgrav(path, boxsize, n_rows_per_block=15)
     assert np.array_equal(x, data[:, 0])
     assert np.array_equal(y, data[:, 1])
     assert np.array_equal(z, data[:, 2])
 
-    x, y, z = shells.read_pkdgrav(path, h, boxsize, n_rows_per_block=100)
+    x, y, z = shells.read_pkdgrav(path, boxsize, n_rows_per_block=100)
     assert np.array_equal(x, data[:, 0])
     assert np.array_equal(y, data[:, 1])
     assert np.array_equal(z, data[:, 2])
 
     # test empty file
     np.ones((0, 7), dtype=np.float32).tofile(path)
-    x, y, z = shells.read_pkdgrav(path, h, boxsize)
+    x, y, z = shells.read_pkdgrav(path, boxsize)
     assert x.size == 0
     assert y.size == 0
     assert z.size == 0
