@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import healpy as hp
 import mock
@@ -51,19 +52,27 @@ def test_read_pkdgrav():
     n_particles = 40
     boxsize = 2.0
     h = 0.7
+    path = 'test.out'
 
-    # create test data
+    # create test data and write to disk
     data = np.random.rand(n_particles, 7).astype(np.float32)
+    data.tofile(path)
 
     # test
-    with mock.patch('numpy.fromfile') as fromfile:
-        fromfile.return_value = data.ravel()
+    data *= boxsize * 1000 / h
 
-        x, y, z = shells.read_pkdgrav(None, h, boxsize)
-
-    assert np.array_equal(x, data[:, 0])  # this works because read_pkdgrav modifies data in-place
+    x, y, z = shells.read_pkdgrav(path, h, boxsize, n_rows_per_block=15)
+    assert np.array_equal(x, data[:, 0])
     assert np.array_equal(y, data[:, 1])
     assert np.array_equal(z, data[:, 2])
+
+    x, y, z = shells.read_pkdgrav(path, h, boxsize, n_rows_per_block=100)
+    assert np.array_equal(x, data[:, 0])
+    assert np.array_equal(y, data[:, 1])
+    assert np.array_equal(z, data[:, 2])
+
+    # remove test file
+    os.remove(path)
 
 
 def test_pos2ang():
