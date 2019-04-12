@@ -26,14 +26,14 @@ def read_lpicola(path, h, boxsize):
         data_blocks.append(data_block)
         block_start = block_start + block_size + 5  # 4 uint32 before the block and 1 afterwards
 
-    data = np.vstack(data_blocks)
+    data = np.vstack(data_blocks)[:, :3]
 
     # transform to Mpc and subtract origin
     origin = boxsize * 500.0
-    data[:, :3] /= h
-    data[:, :3] -= origin
+    data /= h
+    data -= origin
 
-    return data[:, 0], data[:, 1], data[:, 2]
+    return data.T
 
 
 def read_pkdgrav(path, boxsize, n_rows_per_block=int(1e6)):
@@ -68,7 +68,7 @@ def read_pkdgrav(path, boxsize, n_rows_per_block=int(1e6)):
     # transforms to Mpc
     data *= boxsize * 1000
 
-    return data[:, 0], data[:, 1], data[:, 2]
+    return data.T
 
 
 def pos2ang(path, z_low, delta_z, boxsize, cosmo, file_format='l-picola'):
