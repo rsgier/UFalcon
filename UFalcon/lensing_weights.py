@@ -49,8 +49,8 @@ class Continuous:
         return self.nz_intpt(y) * \
                utils.dimensionless_comoving_distance(0, x, cosmo) * \
                utils.dimensionless_comoving_distance(x, y, cosmo) * \
-               (1 + x) / \
-               utils.e(x, cosmo) / \
+               (1 + x) * \
+               utils.one_over_e(x, cosmo) / \
                utils.dimensionless_comoving_distance(0, y, cosmo)
 
 
@@ -102,8 +102,8 @@ class Dirac:
     def _integrand(self, x, cosmo):
         return utils.dimensionless_comoving_distance(0, x, cosmo) * \
                utils.dimensionless_comoving_distance(x, self.z_source, cosmo) * \
-               (1 + x) / \
-               utils.e(x, cosmo)
+               (1 + x) * \
+               utils.one_over_e(x, cosmo)
 
 
 def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
