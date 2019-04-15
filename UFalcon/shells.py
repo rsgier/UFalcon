@@ -38,7 +38,7 @@ def read_lpicola(path, h, boxsize):
 
 def read_pkdgrav(path, boxsize, n_rows_per_block=int(1e6)):
     """
-    Reads in a binary data file produced by L-Picola.
+    Reads in a binary data file produced by PKDGRAV.
     :param path: path to file
     :param boxsize: size of the box in Gigaparsec
     :param n_rows_per_block: number of rows to read in one block, allows to limit memory consumption for large files
