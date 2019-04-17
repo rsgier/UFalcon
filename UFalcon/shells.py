@@ -160,7 +160,7 @@ def construct_shells(dirpath, z_shells, boxsize, cosmo, nside, file_format='l-pi
     print('Will process {} files'.format(len(filelist)))
 
     # initialize shells
-    shells = np.zeros((len(z_shells) - 1, hp.nside2npix(nside)), dtype=np.int)
+    shells = np.zeros((len(z_shells) - 1, hp.nside2npix(nside)), dtype=np.int32)
 
     # compute comoving distances of the shell boundaries
     com_shells = [utils.comoving_distance(0, z, cosmo) for z in z_shells]
