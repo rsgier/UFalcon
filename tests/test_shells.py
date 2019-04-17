@@ -122,21 +122,9 @@ def test_thetaphi_to_pixelcounts():
     assert np.array_equal(m_in, m_out)
 
 
-def create_random_map(nside):
-
-    npix = hp.nside2npix(nside)
-    counts_map = np.zeros(npix)
-    pix_ind = np.random.choice(npix, size=npix, replace=True)
-
-    for i in pix_ind:
-        counts_map[i] += 1
-
-    return pix_ind, counts_map
-
-
 def test_construct_shells():
     """
-    Test the construction of a shell from individual L-Picola output files.
+    Test the construction of a shells from N-Body output files.
     """
 
     nside = 512
@@ -144,20 +132,20 @@ def test_construct_shells():
     n_particles_per_shell = 100
     cosmo = PyCosmo.Cosmo()
 
-    # compute comoving distances to the centers of the shells
-    comoving_distances_shells = []
-    for i in range(len(z_shells) - 1):
-        comoving_distances_shells.append(utils.comoving_distance(0, (z_shells[i] + z_shells[i + 1]) / 2, cosmo))
+    # compute comoving distances to the edges of the shells
+    comoving_distances_shells = [utils.comoving_distance(0, z, cosmo) for z in z_shells]
 
     # create random sets of positions located inside one shell each
-    pos = np.random.uniform(low=-1, high=1, size=(len(comoving_distances_shells), n_particles_per_shell, 3))
+    pos = np.random.uniform(low=-1, high=1, size=(len(z_shells) - 1, n_particles_per_shell, 3))
 
     for i_shell in range(pos.shape[0]):
-        f = comoving_distances_shells[i_shell] ** 2 / np.sum(pos[i_shell] ** 2, axis=-1)
+        f = np.random.uniform(low=comoving_distances_shells[i_shell],
+                              high=comoving_distances_shells[i_shell + 1],
+                              size=n_particles_per_shell) ** 2 / np.sum(pos[i_shell] ** 2, axis=-1)
         pos[i_shell] *= np.sqrt(f).reshape(f.size, 1)
 
     # shuffle positions around
-    pos_randomized = pos.copy().reshape(len(comoving_distances_shells) * n_particles_per_shell, 3)
+    pos_randomized = pos.copy().reshape(-1, 3)
     pos_randomized = pos_randomized[np.random.permutation(pos_randomized.shape[0])]
     pos_randomized = pos_randomized.reshape(pos.shape)
 
@@ -167,7 +155,7 @@ def test_construct_shells():
         return pos_randomized[ind]
 
     with mock.patch('os.listdir') as listdir:
-        listdir.return_value = list(map(str, range(len(comoving_distances_shells))))  # as many "filenames" as we have shells
+        listdir.return_value = list(map(str, range(pos.shape[0])))  # as many "filenames" as we have sets of particle positions
 
         with mock.patch('UFalcon.shells.read_file', side_effect=read_file_side_effect):
             particle_shells = shells.construct_shells('', z_shells, None, cosmo, nside)
