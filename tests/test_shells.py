@@ -4,27 +4,18 @@ import healpy as hp
 import mock
 import pytest
 import PyCosmo
-from UFalcon import shells
-from UFalcon.utils import comoving_distance
-
-
-def create_random_map(nside):
-
-    npix = hp.nside2npix(nside)
-    counts_map = np.zeros(npix)
-    pix_ind = np.random.choice(npix, size=npix, replace=True)
-
-    for i in pix_ind:
-        counts_map[i] += 1
-
-    return pix_ind, counts_map
+from UFalcon import utils, shells
 
 
 def test_read_lpicola():
+    """
+    Tests the reading of a binary file produced by L-PICOLA.
+    """
 
     n_particles = 40
     boxsize = 2.0
     h = 0.7
+    path = 'test.out'
 
     # create test data
     data = np.random.rand(n_particles, 7).astype(np.float32) * boxsize * 1000
@@ -35,19 +26,20 @@ def test_read_lpicola():
     block_int[:] = 0
     block_int[1] = n_particles
     block[4:] = data.reshape(-1, 1).flatten()
+    block.tofile(path)
 
     # test
-    with mock.patch('numpy.fromfile') as fromfile:
-        fromfile.return_value = block
+    xyz = shells.read_lpicola(path, h, boxsize)
+    assert np.array_equal(xyz, data[:, :3] / h - boxsize * 500)
 
-        x, y, z = shells.read_lpicola(None, h, boxsize)
-
-    assert np.array_equal(x, (data[:, 0] / h) - boxsize * 500)
-    assert np.array_equal(y, (data[:, 1] / h) - boxsize * 500)
-    assert np.array_equal(z, (data[:, 2] / h) - boxsize * 500)
+    # remove test file
+    os.remove(path)
 
 
 def test_read_pkdgrav():
+    """
+    Tests the reading of a binary file produced by PKDGRAV.
+    """
 
     n_particles = 40
     boxsize = 2.0
@@ -60,122 +52,127 @@ def test_read_pkdgrav():
     # test
     data *= boxsize * 1000
 
-    x, y, z = shells.read_pkdgrav(path, boxsize, n_rows_per_block=15)
-    assert np.array_equal(x, data[:, 0])
-    assert np.array_equal(y, data[:, 1])
-    assert np.array_equal(z, data[:, 2])
+    xyz = shells.read_pkdgrav(path, boxsize, n_rows_per_block=15)
+    assert np.array_equal(xyz, data[:, :3])
 
-    x, y, z = shells.read_pkdgrav(path, boxsize, n_rows_per_block=100)
-    assert np.array_equal(x, data[:, 0])
-    assert np.array_equal(y, data[:, 1])
-    assert np.array_equal(z, data[:, 2])
+    xyz = shells.read_pkdgrav(path, boxsize, n_rows_per_block=100)
+    assert np.array_equal(xyz, data[:, :3])
 
     # test empty file
     np.ones((0, 7), dtype=np.float32).tofile(path)
-    x, y, z = shells.read_pkdgrav(path, boxsize)
-    assert x.size == 0
-    assert y.size == 0
-    assert z.size == 0
+    xyz = shells.read_pkdgrav(path, boxsize)
+    assert xyz.size == 0
 
     # remove test file
     os.remove(path)
 
 
-def test_pos2ang():
+def test_read_file():
     """
-    Test the reading of a binary file and the selection of the particles inside a given redshift shell.
+    Tests the reading of a binary file produced by either L-PICOLA or PKDGRAV.
     """
 
-    n_particles = 40
-    boxsize = 2.0
-    origin = boxsize * 500.0
-    z_low = 0.105
-    delta_z = 0.09
+    with mock.patch('UFalcon.shells.read_lpicola') as read_lpicola:
+        read_lpicola.return_value = 1
+        assert shells.read_file(None, None, PyCosmo.Cosmo(), file_format='l-picola') == 1
+
+    with mock.patch('UFalcon.shells.read_pkdgrav') as read_pkdgrav:
+        read_pkdgrav.return_value = 1
+        assert shells.read_file(None, None, None, file_format='pkdgrav') == 1
+
+    with pytest.raises(ValueError):
+        shells.read_file(None, None, None, file_format='wrong')
+
+
+def test_xyz_to_spherical():
+    """
+    Tests the conversion from cartesian to spherical coordinates.
+    """
+    # sample random positions
+    x_y_z = np.random.uniform(low=-1, high=1, size=(10, 3))
+    # transform to spherical coordinates
+    r_theta_phi = shells.xyz_to_spherical(x_y_z)
+    # transform back
+    x_y_z_out = hp.ang2vec(r_theta_phi[:, 1], r_theta_phi[:, 2]) * r_theta_phi[:, :1]
+    # compare
+    assert np.allclose(x_y_z_out, x_y_z)
+
+
+def test_thetaphi_to_pixelcounts():
+    """
+    Test the conversion from angular coordinates to number counts in healpix pixels.
+    """
+    # create random healpix map
+    nside = 512
+    pix_ind = np.random.choice(hp.nside2npix(nside), size=hp.nside2npix(nside))
+    m_in = np.zeros(hp.nside2npix(nside))
+
+    for i in pix_ind:
+        m_in[i] += 1
+
+    # transform to angles
+    theta, phi = hp.pix2ang(nside, pix_ind)
+
+    # call function
+    counts = shells.thetaphi_to_pixelcounts(theta, phi, nside)
+    m_out = np.zeros_like(m_in)
+    m_out[:counts.size] = counts
+
+    # compare
+    assert np.array_equal(m_in, m_out)
+
+
+def test_construct_shells():
+    """
+    Test the construction of a shells from N-Body output files.
+    """
+
+    nside = 512
+    z_shells = [0, 0.1, 0.5, 1]
+    n_particles_per_shell = 100
     cosmo = PyCosmo.Cosmo()
 
-    # create test data
-    np.random.seed(10)
-    data = np.random.rand(n_particles, 3).astype(np.float32) * boxsize * 1000 - origin
+    # compute comoving distances to the edges of the shells
+    comoving_distances_shells = [utils.comoving_distance(0, z, cosmo) for z in z_shells]
 
-    # find particles inside shell
-    theta_in = []
-    phi_in = []
-    com_low = comoving_distance(0, z_low, cosmo)
-    com_up = comoving_distance(0, z_low + delta_z, cosmo)
+    # create random sets of positions located inside one shell each
+    pos = np.random.uniform(low=-1, high=1, size=(len(z_shells) - 1, n_particles_per_shell, 3))
 
-    for ip in range(n_particles):
+    for i_shell in range(pos.shape[0]):
+        f = np.random.uniform(low=comoving_distances_shells[i_shell],
+                              high=comoving_distances_shells[i_shell + 1],
+                              size=n_particles_per_shell) ** 2 / np.sum(pos[i_shell] ** 2, axis=-1)
+        pos[i_shell] *= np.sqrt(f).reshape(f.size, 1)
 
-        x = data[ip, 0]
-        y = data[ip, 1]
-        z = data[ip, 2]
-
-        if com_low < np.sqrt(x ** 2 + y ** 2 + z ** 2) <= com_up:
-            theta_in.append(np.pi / 2 - np.arctan2(z, (np.sqrt(x ** 2 + y ** 2))))
-            phi_in.append(np.pi + np.arctan2(y, x))
-
-    # test
-    with mock.patch('UFalcon.shells.read_lpicola') as read_lpicola:
-        read_lpicola.return_value = data[:, 0], data[:, 1], data[:, 2]
-
-        theta_out, phi_out = shells.pos2ang(None, z_low, delta_z, boxsize, cosmo)
-
-        assert np.allclose(theta_in, theta_out)
-        assert np.allclose(phi_in, phi_out)
-
-    # test pathological case where there are no particles inside the shell
-    with mock.patch('UFalcon.shells.read_lpicola') as read_lpicola:
-        read_lpicola.return_value = data[:, 0] * 0, data[:, 1] * 0, data[:, 2] * 0
-
-        theta_out, phi_out = shells.pos2ang(None, z_low, delta_z, boxsize, cosmo)
-        assert theta_out.size == 0
-        assert phi_out.size == 0
-
-    # test error raising
-    with pytest.raises(ValueError):
-        shells.pos2ang(None, z_low, delta_z, boxsize, cosmo, file_format='wrong')
-
-
-def test_ang2map():
-    """
-    Test the conversion from healpix angular coordinates to number counts.
-    """
-
-    nside = 512
-
-    # create map and draw random pixel indices
-    pix_ind, counts = create_random_map(nside)
-
-    # test
-    assert np.array_equal(counts, shells.ang2map(*hp.pix2ang(nside, pix_ind), nside))
-
-
-def test_construct_shell():
-    """
-    Test the construction of a shell from individual L-Picola output files.
-    """
-
-    nside = 512
-
-    # create 3 random maps
-    pix_inds = []
-    counts_map = 0
-
-    for _ in range(3):
-        pix_ind, counts = create_random_map(nside)
-        pix_inds.append(pix_ind)
-        counts_map += counts
-
-    def pos2ang_side_effect(*args, **kwargs):
-        ind = int(args[0])
-        return hp.pix2ang(nside, pix_inds[ind])
+    # shuffle positions around
+    pos_randomized = pos.copy().reshape(-1, 3)
+    pos_randomized = pos_randomized[np.random.permutation(pos_randomized.shape[0])]
+    pos_randomized = pos_randomized.reshape(pos.shape)
 
     # run function
-    with mock.patch('os.listdir') as listdir:
-        listdir.return_value = list(map(str, range(len(pix_inds))))  # as many "filenames" as we have maps
+    def read_file_side_effect(*args, **kwargs):
+        ind = int(args[0])
+        return pos_randomized[ind]
 
-        with mock.patch('UFalcon.shells.pos2ang', side_effect=pos2ang_side_effect):
-            assert np.array_equal(shells.construct_shell('', None, None, None, None, nside), counts_map)
+    with mock.patch('os.listdir') as listdir:
+        listdir.return_value = list(map(str, range(pos.shape[0])))  # as many "filenames" as we have sets of particle positions
+
+        with mock.patch('UFalcon.shells.read_file', side_effect=read_file_side_effect):
+            particle_shells = shells.construct_shells('', z_shells, None, cosmo, nside)
+
+    # check results
+    assert particle_shells.shape[0] == pos.shape[0]
+
+    for i_shell in range(pos.shape[0]):
+        m = np.zeros(hp.nside2npix(nside))
+        r_theta_phi = shells.xyz_to_spherical(pos[i_shell])
+        pix_ind = hp.ang2pix(nside, r_theta_phi[:, 1], r_theta_phi[:, 2])
+
+        for i in pix_ind:
+            m[i] += 1
+
+        assert np.array_equal(m, particle_shells[i_shell])
 
     # test error raising
     with pytest.raises(ValueError):
-        shells.construct_shell('', None, None, None, None, nside, file_format='wrong')
+        shells.construct_shells(None, None, None, None, None, file_format='wrong')

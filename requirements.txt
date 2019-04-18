@@ -16,3 +16,5 @@ PyCosmo
 numpy
 scipy
 healpy
+h5py
+pyyaml

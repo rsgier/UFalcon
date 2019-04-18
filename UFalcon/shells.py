@@ -13,27 +13,49 @@ def read_lpicola(path, h, boxsize):
     :return: 3-tuple containing (x, y, z) particle positions
     """
 
-    # read in binary data
-    as_float = np.fromfile(path, dtype=np.float32, count=-1)
-    as_uint = as_float.view(np.uint32)  # same data, but different interpretation of bit patterns
+    n_rows_total = 0
 
-    block_start = 0
-    data_blocks = []
+    with open(path, mode='rb') as fh:
 
-    while block_start < len(as_uint):
-        block_size = as_uint[block_start + 1] * 7
-        data_block = as_float[block_start + 4: block_start + 4 + block_size].reshape(-1, 7)
-        data_blocks.append(data_block)
-        block_start = block_start + block_size + 5  # 4 uint32 before the block and 1 afterwards
+        # first get the total number of blocks, such that we can pre-allocate memory
+        while True:
+            header = np.fromfile(fh, dtype=np.uint32, count=4)
 
-    data = np.vstack(data_blocks)[:, :3]
+            if header.size == 0:
+                break
+
+            n_rows_current = header[1]
+            n_rows_total += n_rows_current
+            block_size = n_rows_current * 7
+            fh.seek(block_size * 4 + 4, 1)   # data + endmarker
+
+        # pre-allocate
+        data = np.empty((n_rows_total, 3), dtype=np.float32)
+        n_rows_read = 0
+
+        # read out data
+        fh.seek(0)
+        while True:
+            header = np.fromfile(fh, dtype=np.uint32, count=4)
+
+            if header.size == 0:
+                break
+
+            n_rows_current = header[1]
+            block_size = n_rows_current * 7
+            data[n_rows_read: n_rows_read + n_rows_current] = np.fromfile(fh,
+                                                                          dtype=np.float32,
+                                                                          count=block_size).reshape(-1, 7)[:, :3]
+            n_rows_read += n_rows_current
+
+            fh.seek(4, 1)  # skip end marker
 
     # transform to Mpc and subtract origin
     origin = boxsize * 500.0
     data /= h
     data -= origin
 
-    return data.T
+    return data
 
 
 def read_pkdgrav(path, boxsize, n_rows_per_block=int(1e6)):
@@ -68,16 +90,13 @@ def read_pkdgrav(path, boxsize, n_rows_per_block=int(1e6)):
     # transforms to Mpc
     data *= boxsize * 1000
 
-    return data.T
+    return data
 
 
-def pos2ang(path, z_low, delta_z, boxsize, cosmo, file_format='l-picola'):
+def read_file(path, boxsize, cosmo, file_format='l-picola'):
     """
-    Reads in particle positions stored in a binary file and keeps only those particle within a given redshift shell.
-    Returns the kept particle positions as healpix theta- and phi-coordinates.
+    Reads in particle positions stored in a binary file produced by either L-PICOLA or PKDGRAV.
     :param path: path to binary file holding particle positions
-    :param z_low: lower limit of redshift shell
-    :param delta_z: thickness of redshift shell
     :param boxsize: size of the box in Gigaparsec
     :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
     :param file_format: data format, either l-picola or pkdgrav
@@ -85,63 +104,52 @@ def pos2ang(path, z_low, delta_z, boxsize, cosmo, file_format='l-picola'):
     """
 
     if file_format == 'l-picola':
-        pos_x, pos_y, pos_z = read_lpicola(path, cosmo.params.h, boxsize)
+        xyz = read_lpicola(path, cosmo.params.h, boxsize)
     elif file_format == 'pkdgrav':
-        pos_x, pos_y, pos_z = read_pkdgrav(path, boxsize)
+        xyz = read_pkdgrav(path, boxsize)
     else:
         raise ValueError('Data format {} is not supported, choose either "l-picola" or "pkdgrav"')
 
-    # compute comoving radius
-    r = np.sqrt(pos_x ** 2 + pos_y ** 2 + pos_z ** 2)
-
-    # select particles inside shell
-    select_shell = (r > utils.comoving_distance(0.0, z_low, cosmo)) & \
-                   (r <= utils.comoving_distance(0.0, z_low + delta_z, cosmo))
-
-    shell_x = pos_x[select_shell]
-    shell_y = pos_y[select_shell]
-    shell_z = pos_z[select_shell]
-
-    # convert to angles
-    theta = np.pi / 2 - np.arctan2(shell_z, (np.sqrt(shell_x ** 2 + shell_y ** 2)))
-    phi = np.pi + np.arctan2(shell_y, shell_x)
-
-    return theta, phi
+    return xyz
 
 
-def ang2map(theta, phi, nside):
+def xyz_to_spherical(xyz_coord):
     """
-    Returns a healpix map with side length nside with particle counts according to particle input positions
-    (theta, phi).
-    Returns an array of length hp.nside2npix(nside) with the number of particles per pixel.
+    Transform from comoving cartesian (x, y, z)- to spherical coordinates (comoving radius, healpix theta, healpix phi).
+    :param xyz_coord: cartesian coordinates, shape: (number of particles,3 )
+    :return: comoving radius, theta, phi
+    """
+
+    x = xyz_coord[:, 0]
+    y = xyz_coord[:, 1]
+    z = xyz_coord[:, 2]
+    spherical_coord = np.empty_like(xyz_coord)
+
+    # comoving radius
+    spherical_coord[:, 0] = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    # theta, phi
+    spherical_coord[:, 1], spherical_coord[:, 2] = hp.vec2ang(xyz_coord)
+
+    return spherical_coord
+
+
+def thetaphi_to_pixelcounts(theta, phi, nside):
+    """
+    Transforms angular particle positions to counts in healpix pixels. The size of the output array equals the index of
+    the last non-empty pixel (i.e. the largest healpix index with at least one count).
     :param theta: healpix theta-coordinate
     :param phi: healpix phi-coordinate
-    :param nside: resolution of the healpix map
-    :return: healpix map with number of particles as pixel values
+    :param nside: nside of the healpix map
+    :return: counts in each pixel, maximum size: nside - 1
     """
-    particle_counts = np.zeros(hp.nside2npix(nside))
     pix_ind = hp.ang2pix(nside, theta, phi, nest=False)
-    pix_binned = np.bincount(pix_ind)
-    particle_counts[:len(pix_binned)] = pix_binned
-    return particle_counts
+    counts = np.bincount(pix_ind)
+    return counts
 
 
-def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside, file_format='l-picola', verbose=False):
-    """
-    Reads in all files in a given directory and extracts those particles within a given redshift shell.
-    :param dirpath: path of directory, assumed to only contain binary files holding particle positions
-    :param z_low: lower limit of redshift shell
-    :param delta_z: thickness of redshift shell
-    :param boxsize: size of the box in Gigaparsec
-    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
-    :param nside: resolution of the healpix map holding the particle counts
-    :param file_format: data format, either l-picola or pkdgrav
-    :param verbose: whether to information for each file read in
-    :return: healpix map with particle counts inside the shell
-    """
+def construct_shells(dirpath, z_shells, boxsize, cosmo, nside, file_format='l-picola'):
 
-    n_part_total = None
-
+    # find all files to process
     if file_format == 'l-picola':
         filelist = list(filter(lambda fn: os.path.splitext(fn)[1] != '.info', os.listdir(dirpath)))
     elif file_format == 'pkdgrav':
@@ -149,21 +157,38 @@ def construct_shell(dirpath, z_low, delta_z, boxsize, cosmo, nside, file_format=
     else:
         raise ValueError('Data format {} is not supported, choose either "l-picola" or "pkdgrav"')
 
+    print('Will process {} files'.format(len(filelist)))
+
+    # initialize shells
+    shells = np.zeros((len(z_shells) - 1, hp.nside2npix(nside)), dtype=np.int32)
+
+    # compute comoving distances of the shell boundaries
+    com_shells = [utils.comoving_distance(0, z, cosmo) for z in z_shells]
+
+    print('Processing file ', end='', flush=True)
+
     for i, filename in enumerate(filelist):
+
+        print('{} '.format(i + 1), end='', flush=True)
 
         filepath = os.path.join(dirpath, filename)
 
-        if verbose:
-            print('extracting particles from file {} / {}, path: {}'.format(i + 1, len(filelist), filepath))
+        # read out cartesian coordinates
+        coord = read_file(filepath, boxsize, cosmo, file_format=file_format)
 
-        theta, phi = pos2ang(filepath, z_low, delta_z, boxsize, cosmo, file_format=file_format)
+        # transform to spherical coordinates
+        coord[:] = xyz_to_spherical(coord)
 
-        if n_part_total is None:
-            n_part_total = ang2map(theta, phi, nside)
-        else:
-            n_part_total += ang2map(theta, phi, nside)
+        # sort by comoving radius
+        coord[:] = coord[np.argsort(coord[:, 0])]
 
-    if verbose:
-        print('shell construction is finished for z={}'.format(z_low))
+        # sort particles into shells
+        ind_shells = np.searchsorted(coord[:, 0], com_shells, side='left')
 
-    return n_part_total
+        for i_shell in range(shells.shape[0]):
+            i_low = ind_shells[i_shell]
+            i_up = ind_shells[i_shell + 1]
+            counts_shell = thetaphi_to_pixelcounts(coord[i_low: i_up, 1], coord[i_low: i_up, 2], nside)
+            shells[i_shell, :counts_shell.size] += counts_shell
+
+    return shells
