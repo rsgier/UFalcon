@@ -92,7 +92,8 @@ def main(path_config, paths_nz, single_source_redshifts, dirpath_out):
         z_low = config['shells']['z_low'][i_shells]
         z_up = config['shells']['z_up'][i_shells]
 
-        print('Processing shells {} / {}, path: {}'.format(i_shells + 1, len(config['shells']['paths']), path), flush=True)
+        print('Processing shells {} / {}, path: {}'.format(i_shells + 1, len(config['shells']['paths']), path),
+              flush=True)
 
         with h5py.File(config['shells']['paths'][i_shells], mode='r') as fh5:
 
@@ -103,7 +104,7 @@ def main(path_config, paths_nz, single_source_redshifts, dirpath_out):
 
             for c, i_shell in enumerate(ind_shells):
 
-                print('Shell {} / {}'.format(c + 1, len(ind_shells)))
+                print('Shell {} / {}'.format(c + 1, len(ind_shells)), flush=True)
 
                 # load shell
                 shell = fh5['shells'][i_shell].astype(kappa.dtype)
