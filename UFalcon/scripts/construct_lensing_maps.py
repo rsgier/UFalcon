@@ -37,7 +37,7 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out):
 
     # maps from n(z)
     for i, path_nz in enumerate(paths_nz):
-        print('Storing kappa map from n(z) {} / {}'.format(i + 1, len(paths_nz)))
+        print('Storing kappa map from n(z) {} / {}'.format(i + 1, len(paths_nz)), flush=True)
         name_nz = os.path.splitext(os.path.split(path_nz)[1])[0]
         path_out = os.path.join(dirpath_out, 'lensing_maps.{}.fits'.format(name_nz))
         gamma1, gamma2 = kappa_to_gamma(kappa_maps[i])
@@ -55,7 +55,7 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out):
             fh5.create_dataset(name=name, shape=kappa_maps.shape, dtype=kappa_maps.dtype, compression='lzf')
 
         for i, kappa_map in enumerate(kappa_maps[len(paths_nz):]):
-            print('Storing single-source kappa map {} / {}'.format(i + 1, len(single_source_redshifts)))
+            print('Storing single-source kappa map {} / {}'.format(i + 1, len(single_source_redshifts)), flush=True)
             gamma1, gamma2 = kappa_to_gamma(kappa_map)
             fh5['kappa'][i] = kappa_map
             fh5['gamma1'][i] = gamma1
