@@ -86,7 +86,7 @@ def main(path_config, nside, paths_nz, single_source_redshifts, dirpath_out):
     lensing_weighters.extend([UFalcon.lensing_weights.Dirac(zs) for zs in single_source_redshifts])
 
     # add up shells
-    kappa = np.zeros((len(lensing_weighters), nside), dtype=np.float32)
+    kappa = np.zeros((len(lensing_weighters), hp.nside2npix(nside)), dtype=np.float32)
 
     for i_shells in range(len(config['shells']['paths'])):
 
