@@ -35,17 +35,20 @@ def kappa_to_gamma(kappa_map, lmax=None):
 
 def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out):
 
+    nside = hp.npix2nside(kappa_maps.shape[1])
+
     # maps from n(z)
     for i, path_nz in enumerate(paths_nz):
         print('Storing kappa map from n(z) {} / {}'.format(i + 1, len(paths_nz)), flush=True)
         name_nz = os.path.splitext(os.path.split(path_nz)[1])[0]
-        path_out = os.path.join(dirpath_out, 'lensing_maps.{}.fits'.format(name_nz))
+        path_out = os.path.join(dirpath_out, 'lensing_maps.nside{}.{}.fits'.format(nside, name_nz))
         gamma1, gamma2 = kappa_to_gamma(kappa_maps[i])
         hp.write_map(filename=path_out, m=(kappa_maps[i], gamma1, gamma2), fits_IDL=False, coord='C', overwrite=True)
 
     # single-source maps
-    filename_out = 'lensing_maps.z_source_{}-{}.n_sources_{}.h5'.format(*single_source_redshifts[[0, -1]],
-                                                                      single_source_redshifts.size)
+    filename_out = 'lensing_maps.nside{}.z_source_{}-{}.n_sources_{}.h5'.format(nside,
+                                                                                *single_source_redshifts[[0, -1]],
+                                                                                single_source_redshifts.size)
     path_out = os.path.join(dirpath_out, filename_out)
 
     with h5py.File(path_out, mode='w') as fh5:
