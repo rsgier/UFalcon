@@ -14,7 +14,7 @@ def get_redshifts(z_init, z_final, delta_z):
     return z
 
 
-def main(path_config, dirpath_in, sim_type, boxsize, path_out):
+def main(path_config, dirpath_in, sim_type, boxsize, nside, path_out):
 
     print('Config: {}'.format(path_config))
     print('Input directory: {}'.format(dirpath_in))
@@ -36,7 +36,7 @@ def main(path_config, dirpath_in, sim_type, boxsize, path_out):
                                              z_shells=z,
                                              boxsize=boxsize,
                                              cosmo=cosmo,
-                                             nside=config['n_side'],
+                                             nside=nside,
                                              file_format=sim_type)
 
     # store ouput
@@ -56,7 +56,8 @@ if __name__ == '__main__':
     parser.add_argument('--sim_type', type=str, required=True, choices=('l-picola', 'pkdgrav'),
                         help='type of simulation')
     parser.add_argument('--boxsize', type=float, required=True, help='boxsize in Gpc')
+    parser.add_argument('--nside', type=int, required=True, help='nside of output shells')
     parser.add_argument('--path_out', type=str, required=True, help='path where shells will be stored')
     args = parser.parse_args()
 
-    main(args.path_config, args.dirpath_in, args.sim_type, args.boxsize, args.path_out)
+    main(args.path_config, args.dirpath_in, args.sim_type, args.boxsize, args.nside, args.path_out)

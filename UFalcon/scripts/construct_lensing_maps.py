@@ -65,7 +65,7 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out):
             fh5['gamma2'][i] = gamma2
 
 
-def main(path_config, paths_nz, single_source_redshifts, dirpath_out):
+def main(path_config, nside, paths_nz, single_source_redshifts, dirpath_out):
 
     print('Config: {}'.format(path_config))
     print('n(z): {}'.format(paths_nz))
@@ -86,7 +86,7 @@ def main(path_config, paths_nz, single_source_redshifts, dirpath_out):
     lensing_weighters.extend([UFalcon.lensing_weights.Dirac(zs) for zs in single_source_redshifts])
 
     # add up shells
-    kappa = np.zeros((len(lensing_weighters), hp.nside2npix(config['n_side'])), dtype=np.float32)
+    kappa = np.zeros((len(lensing_weighters), nside), dtype=np.float32)
 
     for i_shells in range(len(config['shells']['paths'])):
 
@@ -100,6 +100,11 @@ def main(path_config, paths_nz, single_source_redshifts, dirpath_out):
 
         with h5py.File(config['shells']['paths'][i_shells], mode='r') as fh5:
 
+            # check if nside is ok
+            nside_shells = hp.npix2nside(fh5['shells'].shape[1])
+            assert nside <= nside_shells, 'Requested nside ({}) is larger than nside ({}) of input shells in file {}'.\
+                format(nside, nside_shells, config['shells']['paths'][i_shells])
+
             # select shells inside redshift range
             z_shells = fh5['z'][...]
 
@@ -110,7 +115,7 @@ def main(path_config, paths_nz, single_source_redshifts, dirpath_out):
                 print('Shell {} / {}'.format(c + 1, len(ind_shells)), flush=True)
 
                 # load shell
-                shell = fh5['shells'][i_shell].astype(kappa.dtype)
+                shell = hp.ud_grade(fh5['shells'][i_shell], nside, power=-2).astype(kappa.dtype)
                 z_shell_low, z_shell_up = z_shells[i_shell]
 
                 # divide by dimensionless comoving distance squared and apply prefactor
@@ -133,6 +138,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Construct shells containing particle counts from N-Bodys',
                                      add_help=True)
     parser.add_argument('--path_config', type=str, required=True, help='configuration yaml file')
+    parser.add_argument('--nside', type=int, required=True, help='nside of output maps')
     parser.add_argument('--paths_nz', type=str, help='paths to n(z) files')
     parser.add_argument('--single_source_redshifts', type=str, help='single-source redshifts')
     parser.add_argument('--dirpath_out', type=str, required=True, help='path where shells will be stored')
@@ -148,4 +154,4 @@ if __name__ == '__main__':
     else:
         single_source_redshifts = []
 
-    main(args.path_config, paths_nz, single_source_redshifts, args.dirpath_out)
+    main(args.path_config, args.nside, paths_nz, single_source_redshifts, args.dirpath_out)
