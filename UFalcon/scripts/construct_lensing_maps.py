@@ -74,6 +74,7 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out, i_o
 def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, dirpath_out, i_out=None):
 
     print('Config: {}'.format(path_config))
+    print('Shells: {}'.format(paths_shells))
     print('n(z): {}'.format(paths_nz))
     print('Single-source redshifts: {}'.format(single_source_redshifts))
 
@@ -150,7 +151,7 @@ if __name__ == '__main__':
     parser.add_argument('--i_out', type=int, help='output index added to output filenames')
     args = parser.parse_args()
 
-    paths_shells = args.paths_nz.split(',')
+    paths_shells = args.paths_shells.split(',')
 
     if args.paths_nz is not None:
         paths_nz = args.paths_shells.split(',')
