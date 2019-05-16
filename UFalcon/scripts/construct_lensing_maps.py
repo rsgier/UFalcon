@@ -65,7 +65,7 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out):
             fh5['gamma2'][i] = gamma2
 
 
-def main(path_config, nside, paths_nz, single_source_redshifts, dirpath_out):
+def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, dirpath_out):
 
     print('Config: {}'.format(path_config))
     print('n(z): {}'.format(paths_nz))
@@ -88,22 +88,20 @@ def main(path_config, nside, paths_nz, single_source_redshifts, dirpath_out):
     # add up shells
     kappa = np.zeros((len(lensing_weighters), hp.nside2npix(nside)), dtype=np.float32)
 
-    for i_shells in range(len(config['shells']['paths'])):
+    for i_shells, path in enumerate(paths_shells):
 
-        path = config['shells']['paths'][i_shells]
         boxsize = config['shells']['boxsizes'][i_shells]
         z_low = config['shells']['z_low'][i_shells]
         z_up = config['shells']['z_up'][i_shells]
 
-        print('Processing shells {} / {}, path: {}'.format(i_shells + 1, len(config['shells']['paths']), path),
-              flush=True)
+        print('Processing shells {} / {}, path: {}'.format(i_shells + 1, len(paths_shells), path), flush=True)
 
-        with h5py.File(config['shells']['paths'][i_shells], mode='r') as fh5:
+        with h5py.File(path, mode='r') as fh5:
 
             # check if nside is ok
             nside_shells = hp.npix2nside(fh5['shells'].shape[1])
             assert nside <= nside_shells, 'Requested nside ({}) is larger than nside ({}) of input shells in file {}'.\
-                format(nside, nside_shells, config['shells']['paths'][i_shells])
+                format(nside, nside_shells, path)
 
             # select shells inside redshift range
             z_shells = fh5['z'][...]
@@ -138,14 +136,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Construct shells containing particle counts from N-Bodys',
                                      add_help=True)
     parser.add_argument('--path_config', type=str, required=True, help='configuration yaml file')
+    parser.add_argument('--paths_shells', type=str, required=True, help='paths of shells')
     parser.add_argument('--nside', type=int, required=True, help='nside of output maps')
     parser.add_argument('--paths_nz', type=str, help='paths to n(z) files')
     parser.add_argument('--single_source_redshifts', type=str, help='single-source redshifts')
-    parser.add_argument('--dirpath_out', type=str, required=True, help='path where shells will be stored')
+    parser.add_argument('--dirpath_out', type=str, required=True, help='path where maps will be stored')
     args = parser.parse_args()
 
+    paths_shells = args.paths_nz.split(',')
+
     if args.paths_nz is not None:
-        paths_nz = args.paths_nz.split(',')
+        paths_nz = args.paths_shells.split(',')
     else:
         paths_nz = []
 
@@ -154,4 +155,4 @@ if __name__ == '__main__':
     else:
         single_source_redshifts = []
 
-    main(args.path_config, args.nside, paths_nz, single_source_redshifts, args.dirpath_out)
+    main(args.path_config, paths_shells, args.nside, paths_nz, single_source_redshifts, args.dirpath_out)
