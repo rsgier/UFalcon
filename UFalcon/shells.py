@@ -153,7 +153,7 @@ def construct_shells(dirpath, z_shells, boxsize, cosmo, nside, file_format='l-pi
     if file_format == 'l-picola':
         filelist = list(filter(lambda fn: os.path.splitext(fn)[1] != '.info', os.listdir(dirpath)))
     elif file_format == 'pkdgrav':
-        filelist = list(filter(lambda fn: os.path.splitext(fn)[1] == '.out', os.listdir(dirpath)))
+        filelist = list(filter(lambda fn: '.lcp.' in fn, os.listdir(dirpath)))
     else:
         raise ValueError('Data format {} is not supported, choose either "l-picola" or "pkdgrav"')
 
