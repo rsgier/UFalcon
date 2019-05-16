@@ -43,32 +43,43 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out, i_o
         str_i_out = '_{}'.format(i_out)
 
     # maps from n(z)
-    for i, path_nz in enumerate(paths_nz):
-        print('Storing kappa map from n(z) {} / {}'.format(i + 1, len(paths_nz)), flush=True)
-        name_nz = os.path.splitext(os.path.split(path_nz)[1])[0]
-        path_out = os.path.join(dirpath_out, 'lensing_maps{}.nside{}.{}.fits'.format(str_i_out, nside, name_nz))
-        gamma1, gamma2 = kappa_to_gamma(kappa_maps[i])
-        hp.write_map(filename=path_out, m=(kappa_maps[i], gamma1, gamma2), fits_IDL=False, coord='C', overwrite=True)
+    if len(paths_nz) > 0:
+        for i, path_nz in enumerate(paths_nz):
+            print('Storing kappa map from n(z) {} / {}'.format(i + 1, len(paths_nz)), flush=True)
+            name_nz = os.path.splitext(os.path.split(path_nz)[1])[0]
+            path_out = os.path.join(dirpath_out, 'lensing_maps{}.nside{}.{}.fits'.format(str_i_out, nside, name_nz))
+            gamma1, gamma2 = kappa_to_gamma(kappa_maps[i])
+            hp.write_map(filename=path_out, m=(kappa_maps[i], gamma1, gamma2),
+                         fits_IDL=False,
+                         coord='C',
+                         overwrite=True)
 
     # single-source maps
-    filename_out = 'lensing_maps{}.nside{}.z_source_{}-{}.n_sources_{}.h5'.format(str_i_out,
-                                                                                  nside,
-                                                                                  *single_source_redshifts[[0, -1]],
-                                                                                  single_source_redshifts.size)
-    path_out = os.path.join(dirpath_out, filename_out)
+    if len(single_source_redshifts) > 0:
 
-    with h5py.File(path_out, mode='w') as fh5:
+        kappa_maps_single_source = kappa_maps[len(paths_nz):]
 
-        fh5.create_dataset(name='z', data=single_source_redshifts)
-        for name in ('kappa', 'gamma1', 'gamma2'):
-            fh5.create_dataset(name=name, shape=kappa_maps.shape, dtype=kappa_maps.dtype, compression='lzf')
+        filename_out = 'lensing_maps{}.nside{}.z_source_{}-{}.n_sources_{}.h5'.format(str_i_out,
+                                                                                      nside,
+                                                                                      *single_source_redshifts[[0, -1]],
+                                                                                      single_source_redshifts.size)
+        path_out = os.path.join(dirpath_out, filename_out)
 
-        for i, kappa_map in enumerate(kappa_maps[len(paths_nz):]):
-            print('Storing single-source kappa map {} / {}'.format(i + 1, len(single_source_redshifts)), flush=True)
-            gamma1, gamma2 = kappa_to_gamma(kappa_map)
-            fh5['kappa'][i] = kappa_map
-            fh5['gamma1'][i] = gamma1
-            fh5['gamma2'][i] = gamma2
+        with h5py.File(path_out, mode='w') as fh5:
+
+            fh5.create_dataset(name='z', data=single_source_redshifts)
+            for name in ('kappa', 'gamma1', 'gamma2'):
+                fh5.create_dataset(name=name,
+                                   shape=kappa_maps_single_source.shape,
+                                   dtype=kappa_maps_single_source.dtype,
+                                   compression='lzf')
+
+            for i, kappa_map in enumerate(kappa_maps_single_source):
+                print('Storing single-source kappa map {} / {}'.format(i + 1, len(single_source_redshifts)), flush=True)
+                gamma1, gamma2 = kappa_to_gamma(kappa_map)
+                fh5['kappa'][i] = kappa_map
+                fh5['gamma1'][i] = gamma1
+                fh5['gamma2'][i] = gamma2
 
 
 def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, dirpath_out, i_out=None):
