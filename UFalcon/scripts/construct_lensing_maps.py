@@ -33,22 +33,28 @@ def kappa_to_gamma(kappa_map, lmax=None):
     return q, u
 
 
-def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out):
+def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out, i_out=None):
 
     nside = hp.npix2nside(kappa_maps.shape[1])
+
+    if i_out is None:
+        str_i_out = ''
+    else:
+        str_i_out = '_{}'.format(i_out)
 
     # maps from n(z)
     for i, path_nz in enumerate(paths_nz):
         print('Storing kappa map from n(z) {} / {}'.format(i + 1, len(paths_nz)), flush=True)
         name_nz = os.path.splitext(os.path.split(path_nz)[1])[0]
-        path_out = os.path.join(dirpath_out, 'lensing_maps.nside{}.{}.fits'.format(nside, name_nz))
+        path_out = os.path.join(dirpath_out, 'lensing_maps{}.nside{}.{}.fits'.format(str_i_out, nside, name_nz))
         gamma1, gamma2 = kappa_to_gamma(kappa_maps[i])
         hp.write_map(filename=path_out, m=(kappa_maps[i], gamma1, gamma2), fits_IDL=False, coord='C', overwrite=True)
 
     # single-source maps
-    filename_out = 'lensing_maps.nside{}.z_source_{}-{}.n_sources_{}.h5'.format(nside,
-                                                                                *single_source_redshifts[[0, -1]],
-                                                                                single_source_redshifts.size)
+    filename_out = 'lensing_maps{}.nside{}.z_source_{}-{}.n_sources_{}.h5'.format(str_i_out,
+                                                                                  nside,
+                                                                                  *single_source_redshifts[[0, -1]],
+                                                                                  single_source_redshifts.size)
     path_out = os.path.join(dirpath_out, filename_out)
 
     with h5py.File(path_out, mode='w') as fh5:
@@ -65,7 +71,7 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out):
             fh5['gamma2'][i] = gamma2
 
 
-def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, dirpath_out):
+def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, dirpath_out, i_out=None):
 
     print('Config: {}'.format(path_config))
     print('n(z): {}'.format(paths_nz))
@@ -128,7 +134,7 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, di
                     kappa[i_w] += shell * lensing_weighter(z_shell_low, z_shell_up, cosmo)
 
     # store results
-    store_output(kappa, paths_nz, single_source_redshifts, dirpath_out)
+    store_output(kappa, paths_nz, single_source_redshifts, dirpath_out, i_out=i_out)
 
 
 if __name__ == '__main__':
@@ -141,6 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--paths_nz', type=str, help='paths to n(z) files')
     parser.add_argument('--single_source_redshifts', type=str, help='single-source redshifts')
     parser.add_argument('--dirpath_out', type=str, required=True, help='path where maps will be stored')
+    parser.add_argument('--i_out', type=int, help='output index added to output filenames')
     args = parser.parse_args()
 
     paths_shells = args.paths_nz.split(',')
@@ -155,4 +162,10 @@ if __name__ == '__main__':
     else:
         single_source_redshifts = []
 
-    main(args.path_config, paths_shells, args.nside, paths_nz, single_source_redshifts, args.dirpath_out)
+    main(args.path_config,
+         paths_shells,
+         args.nside,
+         paths_nz,
+         single_source_redshifts,
+         args.dirpath_out,
+         i_out=args.i_out)
