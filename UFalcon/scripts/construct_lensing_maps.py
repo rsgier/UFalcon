@@ -154,7 +154,7 @@ if __name__ == '__main__':
     paths_shells = args.paths_shells.split(',')
 
     if args.paths_nz is not None:
-        paths_nz = args.paths_shells.split(',')
+        paths_nz = args.paths_nz.split(',')
     else:
         paths_nz = []
 
