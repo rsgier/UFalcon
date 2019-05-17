@@ -162,4 +162,4 @@ if __name__ == '__main__':
          args.nside,
          args.paths_nz,
          single_source_redshifts,
-         args.path_out)
+         args.paths_out)
