@@ -1,5 +1,4 @@
 import argparse
-import os
 import yaml
 import numpy as np
 import healpy as hp
@@ -33,23 +32,14 @@ def kappa_to_gamma(kappa_map, lmax=None):
     return q, u
 
 
-def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out, i_out=None):
-
-    nside = hp.npix2nside(kappa_maps.shape[1])
-
-    if i_out is None:
-        str_i_out = ''
-    else:
-        str_i_out = '_{}'.format(i_out)
+def store_output(kappa_maps, paths_nz, single_source_redshifts, paths_out):
 
     # maps from n(z)
     if len(paths_nz) > 0:
         for i, path_nz in enumerate(paths_nz):
             print('Storing kappa map from n(z) {} / {}'.format(i + 1, len(paths_nz)), flush=True)
-            name_nz = os.path.splitext(os.path.split(path_nz)[1])[0]
-            path_out = os.path.join(dirpath_out, 'lensing_maps{}.nside{}.{}.fits'.format(str_i_out, nside, name_nz))
             gamma1, gamma2 = kappa_to_gamma(kappa_maps[i])
-            hp.write_map(filename=path_out, m=(kappa_maps[i], gamma1, gamma2),
+            hp.write_map(filename=paths_out[i], m=(kappa_maps[i], gamma1, gamma2),
                          fits_IDL=False,
                          coord='C',
                          overwrite=True)
@@ -59,13 +49,7 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out, i_o
 
         kappa_maps_single_source = kappa_maps[len(paths_nz):]
 
-        filename_out = 'lensing_maps{}.nside{}.z_source_{}-{}.n_sources_{}.h5'.format(str_i_out,
-                                                                                      nside,
-                                                                                      *single_source_redshifts[[0, -1]],
-                                                                                      single_source_redshifts.size)
-        path_out = os.path.join(dirpath_out, filename_out)
-
-        with h5py.File(path_out, mode='w') as fh5:
+        with h5py.File(paths_out[-1], mode='w') as fh5:
 
             fh5.create_dataset(name='z', data=single_source_redshifts)
             for name in ('kappa', 'gamma1', 'gamma2'):
@@ -82,12 +66,18 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, dirpath_out, i_o
                 fh5['gamma2'][i] = gamma2
 
 
-def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, dirpath_out, i_out=None):
+def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, paths_out):
 
     print('Config: {}'.format(path_config))
     print('Shells: {}'.format(paths_shells))
     print('n(z): {}'.format(paths_nz))
     print('Single-source redshifts: {}'.format(single_source_redshifts))
+
+    n_paths_out = len(paths_nz)
+    if len(single_source_redshifts) > 0:
+        n_paths_out += 1
+    assert len(paths_out) == n_paths_out, 'Number of output paths does not match number of produced maps, should be ' \
+                                          'one per n(z) map and one additional one for ALL single-source redshifts'
 
     # load config
     with open(path_config, mode='r') as f:
@@ -146,7 +136,7 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, di
                     kappa[i_w] += shell * lensing_weighter(z_shell_low, z_shell_up, cosmo)
 
     # store results
-    store_output(kappa, paths_nz, single_source_redshifts, dirpath_out, i_out=i_out)
+    store_output(kappa, paths_nz, single_source_redshifts, paths_out)
 
 
 if __name__ == '__main__':
@@ -158,8 +148,8 @@ if __name__ == '__main__':
     parser.add_argument('--nside', type=int, required=True, help='nside of output maps')
     parser.add_argument('--paths_nz', type=str, nargs='+', default=[], help='paths to n(z) files')
     parser.add_argument('--single_source_redshifts', type=str, nargs='+', default=[], help='single-source redshifts')
-    parser.add_argument('--dirpath_out', type=str, required=True, help='path where maps will be stored')
-    parser.add_argument('--i_out', type=int, help='output index added to output filenames')
+    parser.add_argument('--paths_out', type=str, required=True, nargs='+', help='paths to output files, must contain '
+                                                                                'as many paths as maps are produced')
     args = parser.parse_args()
 
     if len(args.single_source_redshifts) == 1 and ',' in args.single_source_redshifts[0]:
@@ -172,5 +162,4 @@ if __name__ == '__main__':
          args.nside,
          args.paths_nz,
          single_source_redshifts,
-         args.dirpath_out,
-         i_out=args.i_out)
+         args.path_out)
