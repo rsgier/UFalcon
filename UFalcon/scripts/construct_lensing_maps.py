@@ -154,30 +154,23 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Construct shells containing particle counts from N-Bodys',
                                      add_help=True)
     parser.add_argument('--path_config', type=str, required=True, help='configuration yaml file')
-    parser.add_argument('--paths_shells', type=str, required=True, help='paths of shells')
+    parser.add_argument('--paths_shells', type=str, nargs='+', required=True, help='paths of shells')
     parser.add_argument('--nside', type=int, required=True, help='nside of output maps')
-    parser.add_argument('--paths_nz', type=str, help='paths to n(z) files')
-    parser.add_argument('--single_source_redshifts', type=str, help='single-source redshifts')
+    parser.add_argument('--paths_nz', type=str, nargs='+', default=[], help='paths to n(z) files')
+    parser.add_argument('--single_source_redshifts', type=str, nargs='+', default=[], help='single-source redshifts')
     parser.add_argument('--dirpath_out', type=str, required=True, help='path where maps will be stored')
     parser.add_argument('--i_out', type=int, help='output index added to output filenames')
     args = parser.parse_args()
 
-    paths_shells = args.paths_shells.split(',')
-
-    if args.paths_nz is not None:
-        paths_nz = args.paths_nz.split(',')
+    if len(args.single_source_redshifts) == 1 and ',' in args.single_source_redshifts[0]:
+        single_source_redshifts = get_single_source_redshifts(args.single_source_redshifts[0])
     else:
-        paths_nz = []
-
-    if args.single_source_redshifts is not None:
-        single_source_redshifts = get_single_source_redshifts(args.single_source_redshifts)
-    else:
-        single_source_redshifts = []
+        single_source_redshifts = np.array(args.single_source_redshifts, dtype=np.float64)
 
     main(args.path_config,
-         paths_shells,
+         args.paths_shells,
          args.nside,
-         paths_nz,
+         args.paths_nz,
          single_source_redshifts,
          args.dirpath_out,
          i_out=args.i_out)
