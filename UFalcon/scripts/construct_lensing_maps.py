@@ -1,3 +1,4 @@
+import os
 import argparse
 import yaml
 import numpy as np
@@ -66,6 +67,102 @@ def store_output(kappa_maps, paths_nz, single_source_redshifts, paths_out):
                 fh5['gamma2'][i] = gamma2
 
 
+def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_up, cosmo, n_particles):
+
+    # add up shells
+    kappa = np.zeros((len(lensing_weighters), hp.nside2npix(nside)), dtype=np.float32)
+
+    for i_shells, path in enumerate(paths_shells):
+
+        boxsize = boxsizes[i_shells]
+        z_low = zs_low[i_shells]
+        z_up = zs_up[i_shells]
+
+        print('Processing shells {} / {}, path: {}'.format(i_shells + 1, len(paths_shells), path), flush=True)
+
+        with h5py.File(path, mode='r') as fh5:
+
+            # check if nside is ok
+            nside_shells = hp.npix2nside(fh5['shells'].shape[1])
+            assert nside <= nside_shells, 'Requested nside ({}) is larger than nside ({}) of input shells in file {}'. \
+                format(nside, nside_shells, path)
+
+            # select shells inside redshift range
+            z_shells = fh5['z'][...]
+
+            ind_shells = np.where((z_shells[:, 0] >= z_low) & (z_shells[:, 1] <= z_up))[0]
+
+            for c, i_shell in enumerate(ind_shells):
+
+                print('Shell {} / {}'.format(c + 1, len(ind_shells)), flush=True)
+
+                # load shell
+                shell = hp.ud_grade(fh5['shells'][i_shell], nside, power=-2).astype(kappa.dtype)
+                z_shell_low, z_shell_up = z_shells[i_shell]
+
+                # divide by dimensionless comoving distance squared and apply prefactor
+                shell /= UFalcon.utils.dimensionless_comoving_distance(0, (z_shell_low + z_shell_up) / 2, cosmo) ** 2
+                shell *= UFalcon.lensing_weights.kappa_prefactor(n_pix=shell.size,
+                                                                 n_particles=n_particles,
+                                                                 boxsize=boxsize,
+                                                                 cosmo=cosmo)
+
+                # compute lensing weights and add to kappa maps
+                for i_w, lensing_weighter in enumerate(lensing_weighters):
+                    kappa[i_w] += shell * lensing_weighter(z_shell_low, z_shell_up, cosmo)
+
+    return kappa
+
+
+def add_shells_pkdgrav(dirpath, lensing_weighters_cont, singe_source_redshifts, nside, cosmo, n_particles, boxsize):
+
+    # get all shells
+    file_list = list(filter(lambda fn: 'shell_' in fn and os.path.splitext(fn)[1] == '.fits', os.listdir(dirpath)))
+
+    # extract redshifts
+    z_shells_low = []
+    z_shells_up = []
+
+    for filename in file_list:
+        filename_split = os.path.splitext(filename)[0].split('_')
+        z_shells_low.append(float(filename_split[-1]))
+        z_shells_up.append(float(filename_split[-2]))
+
+    # adjust single-source redshifts
+    z_shells = np.unique(z_shells_low + z_shells_up)
+
+    for i, zs in enumerate(single_source_redshifts):
+        single_source_redshifts[i] = z_shells[np.argmin(np.abs(z_shells - zs))]
+
+    print('Adjusted single-source redshifts to: {}'.format(single_source_redshifts))
+
+    lensing_weighters = lensing_weighters_cont + [UFalcon.lensing_weights.Dirac(zs) for zs in single_source_redshifts]
+
+    # add up
+    kappa = np.zeros((len(lensing_weighters), hp.nside2npix(nside)), dtype=np.float32)
+
+    for i, filename in enumerate(file_list):
+
+        path = os.path.join(dirpath, filename)
+        print('Processing shell {} / {}, path: {}'.format(i + 1, len(file_list), path), flush=True)
+
+        # load shell
+        shell = hp.ud_grade(hp.read_map(path), nside, power=-2).astype(kappa.dtype)
+
+        # divide by dimensionless comoving distance squared and apply prefactor
+        shell /= UFalcon.utils.dimensionless_comoving_distance(0, (z_shells_low[i] + z_shells_up[i]) / 2, cosmo) ** 2
+        shell *= UFalcon.lensing_weights.kappa_prefactor(n_pix=shell.size,
+                                                         n_particles=n_particles,
+                                                         boxsize=boxsize,
+                                                         cosmo=cosmo)
+
+        # compute lensing weights and add to kappa maps
+        for i_w, lensing_weighter in enumerate(lensing_weighters):
+            kappa[i_w] += shell * lensing_weighter(z_shells_low[i], z_shells_up[i], cosmo)
+
+    return kappa
+
+
 def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, paths_out):
 
     print('Config: {}'.format(path_config))
@@ -87,53 +184,39 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
     cosmo = PyCosmo.Cosmo(config.get('pycosmo_config'))
     cosmo.set(**config.get('cosmology', dict()))
 
-    # get lensing weighters
+    # get continuous lensing weighters
+    try:
+        z_lim_low = min(config['z_low'])
+        z_lim_up = max(config['z_up'])
+    except TypeError:
+        z_lim_low = config['z_low']
+        z_lim_up = config['z_up']
+
     lensing_weighters = [UFalcon.lensing_weights.Continuous(path_nz,
-                                                            z_lim_low=min(config['shells']['z_low']),
-                                                            z_lim_up=max(config['shells']['z_up'])) for path_nz in paths_nz]
-    lensing_weighters.extend([UFalcon.lensing_weights.Dirac(zs) for zs in single_source_redshifts])
+                                                            z_lim_low=z_lim_low,
+                                                            z_lim_up=z_lim_up) for path_nz in paths_nz]
 
-    # add up shells
-    kappa = np.zeros((len(lensing_weighters), hp.nside2npix(nside)), dtype=np.float32)
-
-    for i_shells, path in enumerate(paths_shells):
-
-        boxsize = config['shells']['boxsizes'][i_shells]
-        z_low = config['shells']['z_low'][i_shells]
-        z_up = config['shells']['z_up'][i_shells]
-
-        print('Processing shells {} / {}, path: {}'.format(i_shells + 1, len(paths_shells), path), flush=True)
-
-        with h5py.File(path, mode='r') as fh5:
-
-            # check if nside is ok
-            nside_shells = hp.npix2nside(fh5['shells'].shape[1])
-            assert nside <= nside_shells, 'Requested nside ({}) is larger than nside ({}) of input shells in file {}'.\
-                format(nside, nside_shells, path)
-
-            # select shells inside redshift range
-            z_shells = fh5['z'][...]
-
-            ind_shells = np.where((z_shells[:, 0] >= z_low) & (z_shells[:, 1] <= z_up))[0]
-
-            for c, i_shell in enumerate(ind_shells):
-
-                print('Shell {} / {}'.format(c + 1, len(ind_shells)), flush=True)
-
-                # load shell
-                shell = hp.ud_grade(fh5['shells'][i_shell], nside, power=-2).astype(kappa.dtype)
-                z_shell_low, z_shell_up = z_shells[i_shell]
-
-                # divide by dimensionless comoving distance squared and apply prefactor
-                shell /= UFalcon.utils.dimensionless_comoving_distance(0, (z_shell_low + z_shell_up) / 2, cosmo) ** 2
-                shell *= UFalcon.lensing_weights.kappa_prefactor(n_pix=shell.size,
-                                                                 n_particles=config['n_particles'],
-                                                                 boxsize=boxsize,
-                                                                 cosmo=cosmo)
-
-                # compute lensing weights and add to kappa maps
-                for i_w, lensing_weighter in enumerate(lensing_weighters):
-                    kappa[i_w] += shell * lensing_weighter(z_shell_low, z_shell_up, cosmo)
+    # check if shells from h5 file(s) or shells from PKDGRAV
+    if len(paths_shells) == 1 and os.path.isdir(paths_shells[0]):
+        print('Got one input path which is a directory -- assuming shells stored by PKDGRAV in fits-format')
+        kappa = add_shells_pkdgrav(paths_shells[0],
+                                   lensing_weighters,
+                                   single_source_redshifts,
+                                   nside,
+                                   cosmo,
+                                   config['n_particles'],
+                                   config['boxsize'])
+    else:
+        print('Assuming shells stored in hdf5-format')
+        lensing_weighters.extend([UFalcon.lensing_weights.Dirac(zs) for zs in single_source_redshifts])
+        kappa = add_shells_h5(paths_shells,
+                              lensing_weighters,
+                              nside,
+                              config['boxsizes'],
+                              config['z_low'],
+                              config['z_up'],
+                              cosmo,
+                              config['n_particles'])
 
     # store results
     store_output(kappa, paths_nz, single_source_redshifts, paths_out)
