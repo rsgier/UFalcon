@@ -33,22 +33,43 @@ def kappa_to_gamma(kappa_map, lmax=None):
     return q, u
 
 
-def store_output(kappa_maps, paths_nz, single_source_redshifts, paths_out):
+def store_output(kappa_maps, single_source_redshifts, paths_out, combine_nz_maps=False):
+
+    n_nz = len(kappa_maps) - len(single_source_redshifts)
 
     # maps from n(z)
-    if len(paths_nz) > 0:
-        for i, path_nz in enumerate(paths_nz):
-            print('Storing kappa map from n(z) {} / {}'.format(i + 1, len(paths_nz)), flush=True)
+    if n_nz > 0:
+
+        gamma1_maps = []
+        gamma2_maps = []
+
+        for i in range(n_nz):
+
+            print('Working on n(z) map {} / {}'.format(i + 1, n_nz), flush=True)
+
             gamma1, gamma2 = kappa_to_gamma(kappa_maps[i])
-            hp.write_map(filename=paths_out[i], m=(kappa_maps[i], gamma1, gamma2),
-                         fits_IDL=False,
-                         coord='C',
-                         overwrite=True)
+
+            if combine_nz_maps:
+                gamma1_maps.append(gamma1)
+                gamma2_maps.append(gamma2)
+
+            if not combine_nz_maps:
+                hp.write_map(filename=paths_out[i], m=(kappa_maps[i], gamma1, gamma2),
+                             fits_IDL=False,
+                             coord='C',
+                             overwrite=True)
+                print('Wrote {}'.format(paths_out[i]))
+
+        if combine_nz_maps:
+            print('Storing all n(z) maps into single file')
+            nz_maps = np.stack((kappa_maps[:n_nz], gamma1_maps, gamma2_maps), axis=1)
+            np.save(paths_out[0], nz_maps)
+            print('Wrote {}'.format(paths_out[0]))
 
     # single-source maps
     if len(single_source_redshifts) > 0:
 
-        kappa_maps_single_source = kappa_maps[len(paths_nz):]
+        kappa_maps_single_source = kappa_maps[n_nz:]
 
         with h5py.File(paths_out[-1], mode='w') as fh5:
 
@@ -114,7 +135,7 @@ def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_u
     return kappa
 
 
-def add_shells_pkdgrav(dirpath, lensing_weighters_cont, singe_source_redshifts, nside, cosmo, n_particles, boxsize):
+def add_shells_pkdgrav(dirpath, lensing_weighters_cont, single_source_redshifts, nside, cosmo, n_particles, boxsize):
 
     # get all shells
     file_list = list(filter(lambda fn: 'shell_' in fn and os.path.splitext(fn)[1] == '.fits', os.listdir(dirpath)))
@@ -163,18 +184,23 @@ def add_shells_pkdgrav(dirpath, lensing_weighters_cont, singe_source_redshifts, 
     return kappa
 
 
-def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, paths_out):
+def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, paths_out, combine_nz_maps=False):
 
     print('Config: {}'.format(path_config))
     print('Shells: {}'.format(paths_shells))
     print('n(z): {}'.format(paths_nz))
     print('Single-source redshifts: {}'.format(single_source_redshifts))
 
-    n_paths_out = len(paths_nz)
-    if len(single_source_redshifts) > 0:
-        n_paths_out += 1
-    assert len(paths_out) == n_paths_out, 'Number of output paths does not match number of produced maps, should be ' \
-                                          'one per n(z) map and one additional one for ALL single-source redshifts'
+    if combine_nz_maps:
+        n_paths_out_nz = int(len(paths_nz) > 0)
+    else:
+        n_paths_out_nz = len(paths_nz)
+
+    n_paths_out_single_source = int(len(single_source_redshifts) > 0)
+
+    assert len(paths_out) == n_paths_out_nz + n_paths_out_single_source, \
+        'Number of output paths does not match number of produced maps, should be {} for n(z) maps and {} for ' \
+        'single-source maps'.format(n_paths_out_nz, n_paths_out_single_source)
 
     # load config
     with open(path_config, mode='r') as f:
@@ -219,7 +245,7 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
                               config['n_particles'])
 
     # store results
-    store_output(kappa, paths_nz, single_source_redshifts, paths_out)
+    store_output(kappa, single_source_redshifts, paths_out, combine_nz_maps=combine_nz_maps)
 
 
 if __name__ == '__main__':
@@ -233,16 +259,18 @@ if __name__ == '__main__':
     parser.add_argument('--single_source_redshifts', type=str, nargs='+', default=[], help='single-source redshifts')
     parser.add_argument('--paths_out', type=str, required=True, nargs='+', help='paths to output files, must contain '
                                                                                 'as many paths as maps are produced')
+    parser.add_argument('--combine_nz_maps', action='store_true', help='switch to store all n(z) maps into one file')
     args = parser.parse_args()
 
     if len(args.single_source_redshifts) == 1 and ',' in args.single_source_redshifts[0]:
-        single_source_redshifts = get_single_source_redshifts(args.single_source_redshifts[0])
+        source_redshifts = get_single_source_redshifts(args.single_source_redshifts[0])
     else:
-        single_source_redshifts = np.array(args.single_source_redshifts, dtype=np.float64)
+        source_redshifts = np.array(args.single_source_redshifts, dtype=np.float64)
 
     main(args.path_config,
          args.paths_shells,
          args.nside,
          args.paths_nz,
-         single_source_redshifts,
-         args.paths_out)
+         source_redshifts,
+         args.paths_out,
+         combine_nz_maps=args.combine_nz_maps)
