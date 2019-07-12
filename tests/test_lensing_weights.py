@@ -1,5 +1,5 @@
+from unittest import mock
 import pytest
-import mock
 import numpy as np
 from scipy import stats
 import PyCosmo

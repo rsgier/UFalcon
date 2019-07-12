@@ -1,7 +1,7 @@
 import os
+from unittest import mock
 import numpy as np
 import healpy as hp
-import mock
 import pytest
 import PyCosmo
 from UFalcon import utils, shells
