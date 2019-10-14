@@ -10,13 +10,15 @@ class Continuous:
     Computes the lensing weights for a continuous, user-defined n(z) distribution.
     """
 
-    def __init__(self, path_nz, z_lim_low=0, z_lim_up=None):
+    def __init__(self, path_nz, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=0.0):
         """
         Constructor.
         :param path_nz: path to file containing n(z), assumed to be a text file readable with numpy.genfromtext with
                         the first column containing z and the second column containing n(z).
         :param z_lim_low: lower integration limit to use for n(z) normalization, default: 0
         :param z_lim_up: upper integration limit to use for n(z) normalization, default: last z-coordinate in n(z) file
+        :param shift_nz: Can shift the n(z) function by some redshift (inteneded for easier implementation of photo z bias)
+        :param IA: Intrinsic Alignment. If unequal 0 computes the lensing weights for IA component (needs to be added to normal weights afterwards)
         """
 
         nz = np.genfromtxt(path_nz)
@@ -25,8 +27,9 @@ class Continuous:
             z_lim_up = nz[-1, 0]
 
         self.z_lim_up = z_lim_up
-        self.nz_intpt = interp1d(nz[:, 0], nz[:, 1], bounds_error=False, fill_value=0.0)
+        self.nz_intpt = interp1d(nz[:, 0] - shift_nz, nz[:, 1], bounds_error=False, fill_value=0.0)
         self.nz_norm = integrate.quad(lambda x: self.nz_intpt(x), z_lim_low, self.z_lim_up)[0]
+        self.IA = IA
 
     def __call__(self, z_low, z_up, cosmo):
         """
@@ -36,13 +39,23 @@ class Continuous:
         :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
         :return: lensing weight
         """
-        numerator = integrate.dblquad(self._integrand,
-                                      z_low,
-                                      z_up,
-                                      lambda x: x,
-                                      lambda x: self.z_lim_up,
-                                      args=(cosmo,))[0]
         norm = utils.dimensionless_comoving_distance(z_low, z_up, cosmo) * self.nz_norm
+
+        if np.isclose(self.IA, 0.0):
+            #lensing weights without IA
+            numerator = integrate.dblquad(self._integrand,
+                                          z_low,
+                                          z_up,
+                                          lambda x: x,
+                                          lambda x: self.z_lim_up,
+                                          args=(cosmo,))[0]
+        else:
+            #lengsing weights for IA
+            numerator = (2.0/3.0*cosmo.params.omega_m) * \
+                        (cosmo.params.c/cosmo.params.H0) * \
+                        w_IA(IA, z_low, z_up, cosmo) /  \
+                        (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
+
         return numerator / norm
 
     def _integrand(self, y, x, cosmo):
@@ -105,7 +118,6 @@ class Dirac:
                (1 + x) * \
                utils.one_over_e(x, cosmo)
 
-
 def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
     """
     Computes the prefactor to transform from number of particles to convergence, see https://arxiv.org/abs/0807.3651,
@@ -114,10 +126,43 @@ def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
     :param n_particles: number of particles
     :param boxsize: size of the box in Gigaparsec
     :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
-    :return: 
+    :return:
     """
     convergence_factor = (3.0 * cosmo.params.omega_m / 2.0) * \
                          (n_pix / (4.0 * np.pi)) * \
                          (cosmo.params.H0 / cosmo.params.c) ** 3 * \
                          (boxsize * 1000.0) ** 3 / n_particles
     return convergence_factor
+
+def F_NIA_model(z, IA, cosmo):
+    """
+    Calculates the proportionality factor for the NIA model
+    """
+    growth = lambda a: 1.0/(a**3.0*(cosmo.params.omega_m*a**-3.0 + (1.0 - cosmo.params.omega_m))**1.5)
+    a = 1.0/(1.0 + z)
+    g = 5.0*cosmo.params.omega_m/2.0*np.sqrt(cosmo.params.omega_m*a**-3.0 + (1.0 - cosmo.params.omega_m))*integrate.quad(growth, 0, a)[0]
+
+    # Calculate the growth factor today
+    g_norm = 5.0*cosmo.params.omega_m/2.0*integrate.quad(growth, 0, 1)[0]
+
+    # divide out a
+    g = g/g_norm
+
+    # critical density today = 3*params["h"]^2/(8piG)
+    rho_c = 3*(cosmo.params.H0)**2/(8*np.pi*comso.params.G)
+
+    # Proportionality constant Msun^-1 Mpc^3
+    C1 = 5e-14/cosmo.params.H0**2
+
+    return -IA*rho_c*C1*cosmo.params.omega_m/g
+
+def w_IA(IA, z_low, z_up, cosmo):
+    """
+    Calculates the slice-related weight for the NIA model  with a a given distribution of source redshifts n(z).
+    """
+    def f(x, IA, cosmo):
+        return comso.params.H0/cosmo.params.c*(F_NIA_model(x, IA, cosmo)*self.nz_intpt(x))
+
+    dbl = integrate.quad(f, z_low, z_up, args=(IA, cosmo))[0]
+
+    return dbl
