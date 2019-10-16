@@ -27,9 +27,11 @@ class Continuous:
             z_lim_up = nz[-1, 0]
 
         self.z_lim_up = z_lim_up
+        self.z_lim_low = z_lim_low
         self.nz_intpt = interp1d(nz[:, 0] - shift_nz, nz[:, 1], bounds_error=False, fill_value=0.0)
         self.nz_norm = integrate.quad(lambda x: self.nz_intpt(x), z_lim_low, self.z_lim_up)[0]
         self.IA = IA
+        self.lightcone_points = nz[np.logical_and(z_lim_low < nz[:,0], nz[:,0] < z_lim_up),0]
 
     def __call__(self, z_low, z_up, cosmo):
         """
@@ -41,6 +43,9 @@ class Continuous:
         """
         norm = utils.dimensionless_comoving_distance(z_low, z_up, cosmo) * self.nz_norm
 
+        #different from old UFalcon (ask Raphael)
+        norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
+
         if np.isclose(self.IA, 0.0):
             #lensing weights without IA
             numerator = integrate.dblquad(self._integrand,
@@ -50,11 +55,11 @@ class Continuous:
                                           lambda x: self.z_lim_up,
                                           args=(cosmo,))[0]
         else:
+            print("right")
             #lengsing weights for IA
-            numerator = (2.0/3.0*cosmo.params.omega_m) * \
+            numerator = (2.0/(3.0*cosmo.params.omega_m)) * \
                         (cosmo.params.c/cosmo.params.H0) * \
-                        w_IA(IA, z_low, z_up, cosmo) /  \
-                        (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
+                        w_IA(self.IA, z_low, z_up, cosmo, self.nz_intpt, self.lightcone_points, self.z_lim_low, self.z_lim_up)
 
         return numerator / norm
 
@@ -148,21 +153,25 @@ def F_NIA_model(z, IA, cosmo):
     # divide out a
     g = g/g_norm
 
+    #made to cancel with units
+    G = 4.301e-9
+
     # critical density today = 3*params["h"]^2/(8piG)
-    rho_c = 3*(cosmo.params.H0)**2/(8*np.pi*comso.params.G)
+    rho_c = 3*(cosmo.params.H0)**2/(8*np.pi*G)
 
     # Proportionality constant Msun^-1 Mpc^3
-    C1 = 5e-14/cosmo.params.H0**2
+    C1 = 5e-14/(cosmo.params.H0/100.)**2
 
     return -IA*rho_c*C1*cosmo.params.omega_m/g
 
-def w_IA(IA, z_low, z_up, cosmo):
+def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points, z_lower_bound, z_upper_bound):
     """
     Calculates the slice-related weight for the NIA model  with a a given distribution of source redshifts n(z).
     """
-    def f(x, IA, cosmo):
-        return comso.params.H0/cosmo.params.c*(F_NIA_model(x, IA, cosmo)*self.nz_intpt(x))
+    def f(x, IA, cosmo, nz_intpt):
+        return cosmo.params.H0/cosmo.params.c*(F_NIA_model(x, IA, cosmo)*nz_intpt(x))
 
-    dbl = integrate.quad(f, z_low, z_up, args=(IA, cosmo))[0]
+    points = points[np.logical_and(z_lower_bound < points, points < z_upper_bound)]
+    dbl = integrate.quad(f, z_low, z_up, args=(IA, cosmo, nz_intpt), points=points[np.logical_and(z_low < points, points < z_up)])[0]
 
     return dbl
