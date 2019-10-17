@@ -121,8 +121,6 @@ def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_u
                 shell = hp.ud_grade(fh5['shells'][i_shell], nside, power=-2).astype(kappa.dtype)
                 z_shell_low, z_shell_up = z_shells[i_shell]
 
-                # divide by dimensionless comoving distance squared and apply prefactor
-                #shell /= UFalcon.utils.dimensionless_comoving_distance(0, (z_shell_low + z_shell_up) / 2, cosmo) ** 2
                 shell *= UFalcon.lensing_weights.kappa_prefactor(n_pix=shell.size,
                                                                  n_particles=n_particles,
                                                                  boxsize=boxsize,
@@ -170,8 +168,6 @@ def add_shells_pkdgrav(dirpath, lensing_weighters_cont, single_source_redshifts,
         # load shell
         shell = hp.ud_grade(hp.read_map(path), nside, power=-2).astype(kappa.dtype)
 
-        # divide by dimensionless comoving distance squared and apply prefactor
-        #shell /= UFalcon.utils.dimensionless_comoving_distance(0, (z_shells_low[i] + z_shells_up[i]) / 2, cosmo) ** 2
         shell *= UFalcon.lensing_weights.kappa_prefactor(n_pix=shell.size,
                                                          n_particles=n_particles,
                                                          boxsize=boxsize,

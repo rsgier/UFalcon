@@ -42,8 +42,6 @@ class Continuous:
         :return: lensing weight
         """
         norm = utils.dimensionless_comoving_distance(z_low, z_up, cosmo) * self.nz_norm
-
-        #different from old UFalcon (ask Raphael)
         norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
 
         if np.isclose(self.IA, 0.0):
@@ -55,7 +53,6 @@ class Continuous:
                                           lambda x: self.z_lim_up,
                                           args=(cosmo,))[0]
         else:
-            print("right")
             #lengsing weights for IA
             numerator = (2.0/(3.0*cosmo.params.omega_m)) * \
                         (cosmo.params.c/cosmo.params.H0) * \
@@ -112,6 +109,7 @@ class Dirac:
 
             norm = utils.dimensionless_comoving_distance(z_low, z_up, cosmo) * \
                    utils.dimensionless_comoving_distance(0, self.z_source, cosmo)
+            norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
 
             w = numerator / norm
 
