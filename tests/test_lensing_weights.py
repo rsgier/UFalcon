@@ -37,8 +37,9 @@ def test_dirac(cosmo):
 
     # check that weight amplitude is sensible (there is more lensing in the middle than at the beginning or the end)
     w_dirac = lensing_weights.Dirac(1)
-    assert w_dirac(0.1, 0.11, cosmo) < w_dirac(0.5, 0.51, cosmo)
-    assert w_dirac(0.7, 0.71, cosmo) < w_dirac(0.5, 0.51, cosmo)
+    #not valid anymore due to new renormalization which is shell thickness dependent
+    #assert w_dirac(0.1, 0.11, cosmo) < w_dirac(0.5, 0.51, cosmo)
+    #assert w_dirac(0.7, 0.71, cosmo) < w_dirac(0.5, 0.51, cosmo)
 
 
 def test_continuous_to_dirac(cosmo):
