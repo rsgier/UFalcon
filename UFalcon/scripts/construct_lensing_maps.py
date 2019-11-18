@@ -15,24 +15,6 @@ def get_single_source_redshifts(zs_str):
     return zs
 
 
-def kappa_to_gamma(kappa_map, lmax=None):
-
-    nside = hp.npix2nside(kappa_map.size)
-
-    if lmax is None:
-        lmax = 3 * nside - 1
-
-    kappa_alm = hp.map2alm(kappa_map, lmax=lmax)
-    l = hp.Alm.getlm(lmax)[0]
-
-    # Add the appropriate factor to the kappa_alm
-    fac = np.where(np.logical_and(l != 1, l != 0), np.sqrt(((l + 2.0) * (l - 1))/((l + 1) * l)), 0)
-    kappa_alm *= fac
-    t, q, u = hp.alm2map([np.zeros_like(kappa_alm), kappa_alm, np.zeros_like(kappa_alm)], nside=nside)
-
-    return q, u
-
-
 def store_output(kappa_maps, single_source_redshifts, paths_out, combine_nz_maps=False):
 
     n_nz = len(kappa_maps) - len(single_source_redshifts)
@@ -47,7 +29,7 @@ def store_output(kappa_maps, single_source_redshifts, paths_out, combine_nz_maps
 
             print('Working on n(z) map {} / {}'.format(i + 1, n_nz), flush=True)
 
-            gamma1, gamma2 = kappa_to_gamma(kappa_maps[i])
+            gamma1, gamma2 = UFalcon.utils.kappa_to_gamma(kappa_maps[i])
 
             if combine_nz_maps:
                 gamma1_maps.append(gamma1)
@@ -82,7 +64,7 @@ def store_output(kappa_maps, single_source_redshifts, paths_out, combine_nz_maps
 
             for i, kappa_map in enumerate(kappa_maps_single_source):
                 print('Storing single-source kappa map {} / {}'.format(i + 1, len(single_source_redshifts)), flush=True)
-                gamma1, gamma2 = kappa_to_gamma(kappa_map)
+                gamma1, gamma2 = UFalcon.utils.kappa_to_gamma(kappa_map)
                 fh5['kappa'][i] = kappa_map
                 fh5['gamma1'][i] = gamma1
                 fh5['gamma2'][i] = gamma2

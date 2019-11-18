@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import integrate
+import healpy as hp
 
 
 def one_over_e(z, cosmo):
@@ -35,3 +36,27 @@ def comoving_distance(z_low, z_up, cosmo):
     """
     com = dimensionless_comoving_distance(z_low, z_up, cosmo) * cosmo.params.c / cosmo.params.H0
     return com
+
+
+def kappa_to_gamma(kappa_map, lmax=None):
+    """
+    Computes a gamma_1- and gamma_2-map from a kappa-map, s.t. the kappa TT-spectrum equals the gamma EE-spectrum.
+    :param kappa_map: kappa map
+    :param lmax: maximum multipole to consider, default: 3 * nside - 1
+    :return: gamma_1- and gamma_2-map
+    """
+
+    nside = hp.npix2nside(kappa_map.size)
+
+    if lmax is None:
+        lmax = 3 * nside - 1
+
+    kappa_alm = hp.map2alm(kappa_map, lmax=lmax)
+    l = hp.Alm.getlm(lmax)[0]
+
+    # Add the appropriate factor to the kappa_alm
+    fac = np.where(np.logical_and(l != 1, l != 0), np.sqrt(((l + 2.0) * (l - 1))/((l + 1) * l)), 0)
+    kappa_alm *= fac
+    t, q, u = hp.alm2map([np.zeros_like(kappa_alm), kappa_alm, np.zeros_like(kappa_alm)], nside=nside)
+
+    return q, u
