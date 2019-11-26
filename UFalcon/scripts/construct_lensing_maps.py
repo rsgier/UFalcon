@@ -17,6 +17,9 @@ def get_single_source_redshifts(zs_str):
 
 def store_output(kappa_maps, single_source_redshifts, paths_out, combine_nz_maps=False):
 
+    # mean subtraction
+    kappa_maps -= np.mean(kappa_maps, axis=1, keepdims=True)
+
     n_nz = len(kappa_maps) - len(single_source_redshifts)
 
     # maps from n(z)
