@@ -20,7 +20,7 @@ tests:
     script:
         - pyenv versions
         - pyenv local $(latest_python 3.6)
-        - tox -r -vv 
+        - tox -r -vv
     stage: test_code
     artifacts:
            paths:
@@ -31,7 +31,7 @@ docs:
         - python
     script:
         - pyenv local $(latest_python 3.6)
-        - tox -e docs 
+        - tox -e docs
     stage: test_and_create_docs
     dependencies:
           - tests
