@@ -121,6 +121,7 @@ class Dirac:
                (1 + x) * \
                utils.one_over_e(x, cosmo)
 
+
 def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
     """
     Computes the prefactor to transform from number of particles to convergence, see https://arxiv.org/abs/0807.3651,
@@ -136,6 +137,7 @@ def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
                          (cosmo.params.H0 / cosmo.params.c) ** 3 * \
                          (boxsize * 1000.0) ** 3 / n_particles
     return convergence_factor
+
 
 def F_NIA_model(z, IA, cosmo):
     """
@@ -161,6 +163,7 @@ def F_NIA_model(z, IA, cosmo):
     C1 = 5e-14/(cosmo.params.H0/100.)**2
 
     return -IA*rho_c*C1*cosmo.params.omega_m/g
+
 
 def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points, z_lower_bound, z_upper_bound):
     """
