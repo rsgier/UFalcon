@@ -11,9 +11,3 @@ coverage
 sphinx-pynpoint-theme
 tox
 PyCosmo
-
-numpy
-scipy
-healpy
-h5py
-pyyaml

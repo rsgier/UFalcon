@@ -42,7 +42,9 @@ except IOError:
 
 requires = ['numpy',
             'scipy',
-            'healpy']  # during runtime
+            'healpy',
+            'h5py',
+            'pyyaml']  # during runtime
 
 PACKAGE_PATH = os.path.abspath(os.path.join(__file__, os.pardir))
 
