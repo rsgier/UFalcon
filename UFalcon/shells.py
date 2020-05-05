@@ -147,7 +147,18 @@ def thetaphi_to_pixelcounts(theta, phi, nside):
     return counts
 
 
-def construct_shells(dirpath, z_shells, boxsize, cosmo, nside, file_format='l-picola'):
+def construct_shells(dirpath, z_shells, boxsize, cosmo, nside, file_format='pkdgrav'):
+    """
+    Reads in particle positions stored in all the binary file produced by either L-PICOLA or PKDGRAV and transforms
+    their angular positions to counts in healpix pixels corresponding to shells at different redshifts.
+    :param dirpath: path to the directory holding the binary files with particle positions
+    :param z_shells: array containing the discrete redshifts steps, over which the lightcone is constructed
+    :param boxsize: size of the box in Gigaparsec
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :param nside: nside of the healpix map
+    :param file_format: data format, either l-picola or pkdgrav
+    :return: matrix with dimension (len(z_shells) - 1, Npix) containing the number counts for each shell and pixel-index
+    """
 
     # find all files to process
     if file_format == 'l-picola':
