@@ -17,8 +17,9 @@ class Continuous:
                         the first column containing z and the second column containing n(z).
         :param z_lim_low: lower integration limit to use for n(z) normalization, default: 0
         :param z_lim_up: upper integration limit to use for n(z) normalization, default: last z-coordinate in n(z) file
-        :param shift_nz: Can shift the n(z) function by some redshift (inteneded for easier implementation of photo z bias)
-        :param IA: Intrinsic Alignment. If unequal 0 computes the lensing weights for IA component (needs to be added to normal weights afterwards)
+        :param shift_nz: Can shift the n(z) function by some redshift (intended for easier implementation of photo z bias)
+        :param IA: Intrinsic Alignment. If unequal 0 computes the lensing weights for IA component
+                        (needs to be added to the weights without IA afterwards)
         """
 
         nz = np.genfromtxt(path_nz)
@@ -45,7 +46,7 @@ class Continuous:
         norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
 
         if np.isclose(self.IA, 0.0):
-            #lensing weights without IA
+            # lensing weights without IA
             numerator = integrate.dblquad(self._integrand,
                                           z_low,
                                           z_up,
@@ -53,7 +54,7 @@ class Continuous:
                                           lambda x: self.z_lim_up,
                                           args=(cosmo,))[0]
         else:
-            #lengsing weights for IA
+            # lengsing weights for IA
             numerator = (2.0/(3.0*cosmo.params.omega_m)) * \
                         (cosmo.params.c/cosmo.params.H0) * \
                         w_IA(self.IA, z_low, z_up, cosmo, self.nz_intpt, self.lightcone_points, self.z_lim_low, self.z_lim_up)
@@ -130,7 +131,7 @@ def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
     :param n_particles: number of particles
     :param boxsize: size of the box in Gigaparsec
     :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
-    :return:
+    :return: convergence prefactor
     """
     convergence_factor = (3.0 * cosmo.params.omega_m / 2.0) * \
                          (n_pix / (4.0 * np.pi)) * \
@@ -143,26 +144,26 @@ def F_NIA_model(z, IA, cosmo):
     """
     Calculates the proportionality factor for the NIA model
     """
-    growth = lambda a: 1.0/(a**3.0*(cosmo.params.omega_m*a**-3.0 + (1.0 - cosmo.params.omega_m))**1.5)
-    a = 1.0/(1.0 + z)
-    g = 5.0*cosmo.params.omega_m/2.0*np.sqrt(cosmo.params.omega_m*a**-3.0 + (1.0 - cosmo.params.omega_m))*integrate.quad(growth, 0, a)[0]
+    growth = lambda a: 1.0 / (a**3.0 * (cosmo.params.omega_m * a**-3.0 + (1.0 - cosmo.params.omega_m))**1.5)
+    a = 1.0 / (1.0 + z)
+    g = 5.0 * cosmo.params.omega_m / 2.0 * np.sqrt(cosmo.params.omega_m * a**-3.0 + (1.0 - cosmo.params.omega_m)) * integrate.quad(growth, 0, a)[0]
 
     # Calculate the growth factor today
-    g_norm = 5.0*cosmo.params.omega_m/2.0*integrate.quad(growth, 0, 1)[0]
+    g_norm = 5.0 * cosmo.params.omega_m / 2.0 * integrate.quad(growth, 0, 1)[0]
 
     # divide out a
-    g = g/g_norm
+    g = g / g_norm
 
     #made to cancel with units
     G = 4.301e-9
 
-    # critical density today = 3*params["h"]^2/(8piG)
-    rho_c = 3*(cosmo.params.H0)**2/(8*np.pi*G)
+    # critical density today
+    rho_c = 3 * (cosmo.params.H0)**2 / (8 * np.pi * G)
 
     # Proportionality constant Msun^-1 Mpc^3
-    C1 = 5e-14/(cosmo.params.H0/100.)**2
+    C1 = 5e-14 / (cosmo.params.H0 / 100.0)**2
 
-    return -IA*rho_c*C1*cosmo.params.omega_m/g
+    return -IA * rho_c * C1 * cosmo.params.omega_m / g
 
 
 def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points, z_lower_bound, z_upper_bound):
@@ -170,7 +171,7 @@ def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points, z_lower_bound, z_upper_bound)
     Calculates the slice-related weight for the NIA model  with a a given distribution of source redshifts n(z).
     """
     def f(x, IA, cosmo, nz_intpt):
-        return cosmo.params.H0/cosmo.params.c*(F_NIA_model(x, IA, cosmo)*nz_intpt(x))
+        return cosmo.params.H0 / cosmo.params.c * (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
 
     points = points[np.logical_and(z_lower_bound < points, points < z_upper_bound)]
     dbl = integrate.quad(f, z_low, z_up, args=(IA, cosmo, nz_intpt), points=points[np.logical_and(z_low < points, points < z_up)])[0]

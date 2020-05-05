@@ -38,7 +38,7 @@ def test_read_lpicola():
 
 def test_read_pkdgrav():
     """
-    Tests the reading of a binary file produced by PKDGRAV.
+    Tests the reading of a binary file produced by PKDGRAV3.
     """
 
     n_particles = 40
@@ -69,7 +69,7 @@ def test_read_pkdgrav():
 
 def test_read_file():
     """
-    Tests the reading of a binary file produced by either L-PICOLA or PKDGRAV.
+    Tests the reading of a binary file produced by either L-PICOLA or PKDGRAV3.
     """
 
     with mock.patch('UFalcon.shells.read_lpicola') as read_lpicola:
