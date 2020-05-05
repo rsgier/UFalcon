@@ -10,7 +10,7 @@ def read_lpicola(path, h, boxsize):
     :param path: path to file
     :param h: dimensionless Hubble parameter
     :param boxsize: size of the box in Gigaparsec
-    :return: 3-tuple containing (x, y, z) particle positions
+    :return: 3-tuple containing (x, y, z) particle positions in Megaparsec
     """
 
     n_rows_total = 0
@@ -64,7 +64,7 @@ def read_pkdgrav(path, boxsize, n_rows_per_block=int(1e6)):
     :param path: path to file
     :param boxsize: size of the box in Gigaparsec
     :param n_rows_per_block: number of rows to read in one block, allows to limit memory consumption for large files
-    :return: 3-tuple containing (x, y, z) particle positions
+    :return: 3-tuple containing (x, y, z) particle positions in Megaparsec
     """
 
     # get the total number of rows
@@ -93,7 +93,7 @@ def read_pkdgrav(path, boxsize, n_rows_per_block=int(1e6)):
     return data
 
 
-def read_file(path, boxsize, cosmo, file_format='l-picola'):
+def read_file(path, boxsize, cosmo, file_format='pkdgrav'):
     """
     Reads in particle positions stored in a binary file produced by either L-PICOLA or PKDGRAV.
     :param path: path to binary file holding particle positions
@@ -116,7 +116,7 @@ def read_file(path, boxsize, cosmo, file_format='l-picola'):
 def xyz_to_spherical(xyz_coord):
     """
     Transform from comoving cartesian (x, y, z)- to spherical coordinates (comoving radius, healpix theta, healpix phi).
-    :param xyz_coord: cartesian coordinates, shape: (number of particles,3 )
+    :param xyz_coord: cartesian coordinates, shape: (number of particles, 3)
     :return: comoving radius, theta, phi
     """
 
