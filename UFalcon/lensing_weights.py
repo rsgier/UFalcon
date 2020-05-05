@@ -142,7 +142,11 @@ def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
 
 def F_NIA_model(z, IA, cosmo):
     """
-    Calculates the proportionality factor for the NIA model
+    Calculates the NIA kernel used to calculate the IA shell weight
+    :param z: Redshift where to evaluate
+    :param IA: Galaxy intrinsic alignments amplitude
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :return: NIA kernel at redshift z
     """
     growth = lambda a: 1.0 / (a**3.0 * (cosmo.params.omega_m * a**-3.0 + (1.0 - cosmo.params.omega_m))**1.5)
     a = 1.0 / (1.0 + z)
@@ -168,7 +172,17 @@ def F_NIA_model(z, IA, cosmo):
 
 def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points, z_lower_bound, z_upper_bound):
     """
-    Calculates the slice-related weight for the NIA model  with a a given distribution of source redshifts n(z).
+    Calculates the weight per slice for the NIA model given a 
+    distribution of source redshifts n(z).
+    :param IA: Galaxy Intrinsic alignment amplitude
+    :param z_low: Lower redshift limit of the shell
+    :param z_up: Upper redshift limit of the shell
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :param nz_intpt: nz function 
+    :param points: Points in redshift where integrad is evaluated 
+    :param z_lower_bound: Absolute lower bound for reshift
+    :param z_upper_bound: Absolute upper bound for reshift
+    :return: Shell weight for NIA model
     """
     def f(x, IA, cosmo, nz_intpt):
         return cosmo.params.H0 / cosmo.params.c * (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
