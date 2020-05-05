@@ -93,7 +93,7 @@ def read_pkdgrav(path, boxsize, n_rows_per_block=int(1e6)):
     return data
 
 
-def read_file(path, boxsize, cosmo, file_format='pkdgrav'):
+def read_file(path, boxsize, cosmo, file_format='l-picola'):
     """
     Reads in particle positions stored in a binary file produced by either L-PICOLA or PKDGRAV.
     :param path: path to binary file holding particle positions
@@ -147,7 +147,7 @@ def thetaphi_to_pixelcounts(theta, phi, nside):
     return counts
 
 
-def construct_shells(dirpath, z_shells, boxsize, cosmo, nside, file_format='pkdgrav'):
+def construct_shells(dirpath, z_shells, boxsize, cosmo, nside, file_format='l-picola'):
     """
     Reads in particle positions stored in all the binary file produced by either L-PICOLA or PKDGRAV and transforms
     their angular positions to counts in healpix pixels corresponding to shells at different redshifts.
