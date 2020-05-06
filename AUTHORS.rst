@@ -5,7 +5,7 @@ Credits
 Development Lead
 ----------------
 
-* Raphael Sgier <rsgier@phys.ethz.ch>
+* Raphael Sgier <rsgier@phys.ethz.ch> and Jörg Herbel
 
 Contributors
 ------------

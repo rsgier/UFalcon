@@ -4,9 +4,9 @@ UFalcon - Version 0.1.0
 
 UFalcon - Ultra Fast Lightcone
 
-(`Sgier et al. 2019 <https://iopscience.iop.org/article/10.1088/1475-7516/2019/01/044>`_)
-
 Package for constructing full-sky lightcones from N-Body simulation output. Written in Python 3.
+
+Introduced in `Sgier et al. 2019 <https://iopscience.iop.org/article/10.1088/1475-7516/2019/01/044>`_ and Sgier et al. 2020.
 
 N-Body Simulations
 --------
