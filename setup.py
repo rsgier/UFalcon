@@ -31,7 +31,7 @@ PACKAGE_PATH = os.path.abspath(os.path.join(__file__, os.pardir))
 
 setup(
     name='UFalcon',
-    version='0.1.0',
+    version='1.0.0',
     description='Ultra Fast Lightcone',
     long_description=readme + '\n\n' + doclink + '\n\n' + history,
     author='Raphael Sgier',
@@ -40,7 +40,7 @@ setup(
     packages=find_packages(include=["UFalcon"]),
     include_package_data=True,
     install_requires=requirements,
-    license="Proprietary",
+    license="MIT Licence",
     zip_safe=False,
     keywords="UFalcon",
     classifiers=[
