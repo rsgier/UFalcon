@@ -12,3 +12,4 @@ sphinx-pynpoint-theme
 tox
 
 PyCosmo
+h5py

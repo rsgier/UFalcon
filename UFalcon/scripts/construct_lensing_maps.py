@@ -9,6 +9,11 @@ import PyCosmo
 
 
 def get_single_source_redshifts(zs_str):
+    """
+    Generates an array with discrete redshift steps used for lightcone construction with single-source redshifts
+    :param zs_str: string containing redshift range of the lightcone, i.e. 'z_init, z_final, dz'
+    :return: numpy array containing redshifts from z_init to z_final with steps of size dz
+    """
     z_init, z_final, dz = list(map(float, zs_str.split(',')))
     n_digits_round = int(np.ceil(np.amax(np.fabs(np.log10((z_init, z_final, dz))))))
     zs = np.around(np.arange(z_init, z_final + dz, dz), decimals=n_digits_round)
@@ -16,6 +21,14 @@ def get_single_source_redshifts(zs_str):
 
 
 def store_output(kappa_maps, single_source_redshifts, paths_out, combine_nz_maps=False):
+    """
+    Routine to store the computed kappa and derived gamma maps for single-source redshifts and n(z)-dist.
+    :param kappa_maps: file containing the computed kappa-maps, shape ((len(lensing_weights), Npix)
+    :param single_source_redshifts: array containing the single-source redshifts
+    :param paths_out: path where to store the new files
+    :param combine_nz_maps: bool: 'True' if all n(z) maps should be stored in a single file, 'False' otherwise
+    :return: stores kappa and corresponding gamma1 and gamma2 maps in a single or separate files
+    """
 
     # mean subtraction
     kappa_maps -= np.mean(kappa_maps, axis=1, keepdims=True)
@@ -74,6 +87,18 @@ def store_output(kappa_maps, single_source_redshifts, paths_out, combine_nz_maps
 
 
 def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_up, cosmo, n_particles):
+    """
+    Computes kappa-maps from precomputed shells in hdf5-format containing particles counts
+    :param paths_shells: path to shells
+    :param lensing_weighters: lensing weights for continuous n(z)-dist and single-source redshifts, in this order
+    :param nside: nside of output maps
+    :param boxsizes: size of the box in Gigaparsec
+    :param zs_low: lower redshift-bound for the lightcone construction
+    :param zs_up: upper redshift-bound for the lightcone construction
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :param n_particles: total number of parciles used in the N-Body simulation, i.e. (No. of part. per side)^3
+    :return: kappa-maps with shape ((len(lensing_weights), Npix)
+    """
 
     # add up shells
     kappa = np.zeros((len(lensing_weighters), hp.nside2npix(nside)), dtype=np.float32)
@@ -119,6 +144,17 @@ def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_u
 
 
 def add_shells_pkdgrav(dirpath, lensing_weighters_cont, single_source_redshifts, nside, cosmo, n_particles, boxsize):
+    """
+    Computes kappa-maps from precomputed shells in fits-format containing particles counts
+    :param dirpath: path to directory containing the fits-files
+    :param lensing_weighters_cont: lensing weights for a continuous, user-defined n(z) distribution
+    :param single_source_redshifts: array containing single-source redshifts
+    :param nside: nside of output maps
+    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :param n_particles: total number of parciles used in the N-Body simulation, i.e. (No. of part. per side)^3
+    :param boxsize: size of the box in Gigaparsec
+    :return: kappa-maps with shape ((len(lensing_weights), Npix)
+    """
 
     # get all shells
     file_list = list(filter(lambda fn: 'shell_' in fn and os.path.splitext(fn)[1] == '.fits', os.listdir(dirpath)))
@@ -166,6 +202,17 @@ def add_shells_pkdgrav(dirpath, lensing_weighters_cont, single_source_redshifts,
 
 
 def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, paths_out, combine_nz_maps=False):
+    """
+    main example-function; Constructs lensing maps from precomputed shells containing particle counts
+    :param path_config: path to configuration yaml file
+    :param paths_shells: path to shells
+    :param nside: nside of output maps
+    :param paths_nz: path to n(z) files
+    :param single_source_redshifts: array containing the single-source redshifts (continuous shear)
+    :param paths_out: paths to output files, must contain as many paths as maps are produced
+    :param combine_nz_maps: bool: switch to store all n(z) maps into one file
+    :return: computes and stores kappa, gamma1, gamma2 maps
+    """
 
     print('Config: {}'.format(path_config))
     print('Shells: {}'.format(paths_shells))
@@ -229,9 +276,12 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
     store_output(kappa, single_source_redshifts, paths_out, combine_nz_maps=combine_nz_maps)
 
 
+
+
+
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Construct shells containing particle counts from N-Bodys',
+    parser = argparse.ArgumentParser(description='Construct shells containing particle counts from N-Body simulations',
                                      add_help=True)
     parser.add_argument('--path_config', type=str, required=True, help='configuration yaml file')
     parser.add_argument('--paths_shells', type=str, nargs='+', required=True, help='paths of shells')
