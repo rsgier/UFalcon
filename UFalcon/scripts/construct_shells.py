@@ -1,3 +1,10 @@
+# Copyright (C) 2020 ETH Zurich, Institute for Particle Physics and Astrophysics
+# Author: Raphael Sgier and Jörg Herbel
+
+# construct_shells.py
+
+# This file contains example-functions to compute shells (maps with particle counts) using UFalcon
+
 import argparse
 import numpy as np
 import yaml

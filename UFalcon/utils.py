@@ -1,3 +1,6 @@
+# Copyright (C) 2020 ETH Zurich, Institute for Particle Physics and Astrophysics
+# Author: Raphael Sgier and Jörg Herbel
+
 import numpy as np
 from scipy import integrate
 import healpy as hp
