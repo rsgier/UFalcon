@@ -7,6 +7,13 @@ import UFalcon
 
 
 def get_redshifts(z_init, z_final, delta_z):
+    """
+    Generates array containing discrete redshift-steps
+    :param z_init: start redshift
+    :param z_final: end redshift
+    :param delta_z: redshift interval between steps
+    :return: array with redshift-steps between z_init and z_final with delta_z-sized steps
+    """
     to_check = np.array([z_init, z_final, delta_z])
     to_check = to_check[to_check != 0]
     n_digits_round = int(np.ceil(np.amax(np.fabs(np.log10(to_check)))))
@@ -15,6 +22,16 @@ def get_redshifts(z_init, z_final, delta_z):
 
 
 def main(path_config, dirpath_in, sim_type, boxsize, nside, path_out):
+    """
+    Computes and stores maps containing the particle counts (shells) from N-Body simulation output
+    :param path_config: path to configuration yaml file
+    :param dirpath_in: path to directory with N-Body simulation output
+    :param sim_type: type of used N-Body simulation: 'l-picola' or 'pkdgrav' (up to now)
+    :param boxsize: size of the box in Gigaparsec
+    :param nside: nside of output maps
+    :param path_out: path where shells will be stored
+    :return: Computes and stores maps containing the particle counts
+    """
 
     print('Config: {}'.format(path_config))
     print('Input directory: {}'.format(dirpath_in))

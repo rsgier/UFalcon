@@ -13,3 +13,5 @@ tox
 
 PyCosmo
 h5py
+yaml
+argparse
