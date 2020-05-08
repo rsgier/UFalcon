@@ -3,13 +3,16 @@
 
 import pytest
 import numpy as np
-import PyCosmo
+from astropy.cosmology import FlatLambdaCDM
+from astropy import constants as const
 from UFalcon import utils
 
 
 @pytest.fixture()
 def cosmo():
-    return PyCosmo.Cosmo()
+    omega_m = 0.3
+    H0 = 70
+    return FlatLambdaCDM(H0=H0, Om0=omega_m)
 
 
 def test_one_over_e(cosmo):
@@ -18,13 +21,12 @@ def test_one_over_e(cosmo):
     """
     omega_m = 0.3
     omega_l = 0.7
-    cosmo.set(omega_m=omega_m, omega_l_in=omega_l)
 
     for z in [0, 0.5, 1]:
         assert utils.one_over_e(z, cosmo) == 1 / np.sqrt(omega_m * (1 + z) ** 3 + omega_l)
 
 
-def test_comoving_distance(cosmo):
+def test_comoving_distance(cosmo, const):
     """
     Test the computation of the comoving distance.
     """
@@ -33,6 +35,7 @@ def test_comoving_distance(cosmo):
     z_up = z_low + np.random.uniform(low=0, high=0.2, size=z_low.size)
 
     for zl, zu in zip(z_low, z_up):
-        com_utils = utils.comoving_distance(zl, zu, cosmo)
-        com_pycosmo = cosmo.background.dist_rad_a(a=1 / (1 + zu)) - cosmo.background.dist_rad_a(a=1 / (1 + zl))
-        assert (com_utils - com_pycosmo[0]) / com_pycosmo[0] < 0.01
+        com_utils = utils.comoving_distance(zl, zu, cosmo, const)
+        com_astropy = cosmo.comoving_distance(zu).value - cosmo.comoving_distance(zl).value
+
+        assert (com_utils - com_astropy) / com_astropy < 0.01

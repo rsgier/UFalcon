@@ -5,6 +5,7 @@ from unittest import mock
 import pytest
 import numpy as np
 from scipy import stats
+from astropy import constants as const
 import PyCosmo
 
 from UFalcon import lensing_weights
@@ -12,7 +13,9 @@ from UFalcon import lensing_weights
 
 @pytest.fixture()
 def cosmo():
-    return PyCosmo.Cosmo()
+    omega_m = 0.3
+    H0 = 70
+    return FlatLambdaCDM(H0=H0, Om0=omega_m)
 
 
 def test_dirac(cosmo):
@@ -45,7 +48,7 @@ def test_dirac(cosmo):
     #assert w_dirac(0.7, 0.71, cosmo) < w_dirac(0.5, 0.51, cosmo)
 
 
-def test_continuous_to_dirac(cosmo):
+def test_continuous_to_dirac(cosmo, const):
     """
     Test if lensing weights for continuous n(z) converge towards single-source weights for n(z) ~ Dirac-delta.
     """
@@ -67,12 +70,12 @@ def test_continuous_to_dirac(cosmo):
         cont_weights.nz_intpt = stats.norm(loc=z_source, scale=0.005).pdf  # set n(z) interpolator to approximate Dirac
         cont_weights.nz_norm = 1
 
-        w_cont = cont_weights(z_low, z_up, cosmo)
+        w_cont = cont_weights(z_low, z_up, cosmo, const)
 
         assert (w_dirac - w_cont) / w_cont < 0.01
 
 
-def test_dirac_to_continuous(cosmo):
+def test_dirac_to_continuous(cosmo, const):
     """
     Test if lensing weights for a continuous n(z) can be approximated by many single-source weights with source
     redshifts sampled from n(z).
@@ -94,7 +97,7 @@ def test_dirac_to_continuous(cosmo):
 
     cont_weights.nz_intpt = nz.pdf
     cont_weights.nz_norm = 1
-    w_cont = cont_weights(z_low, z_up, cosmo)
+    w_cont = cont_weights(z_low, z_up, cosmo, const)
 
     # sample source redshifts
     zs_source = nz.rvs(size=1000)
@@ -112,15 +115,13 @@ def test_dirac_to_continuous(cosmo):
     assert (w_dirac - w_cont) / w_cont < 0.01
 
 
-def test_kappa_prefactor(cosmo):
+def test_kappa_prefactor(cosmo, const):
     """
     Test the computation of the prefactor to convert to convergence.
     """
     n_pix = 17395392
     n_particles = 1024 ** 3
     boxsize = 6
-    cosmo.set(omega_m=0.3)
-    cosmo.set(h=0.7)
     f = lensing_weights.kappa_prefactor(n_pix, n_particles, boxsize, cosmo)
     assert '{:.18f}'.format(f) == str(0.001595227993431627)
 

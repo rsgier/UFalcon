@@ -6,7 +6,8 @@ from unittest import mock
 import numpy as np
 import healpy as hp
 import pytest
-import PyCosmo
+from astropy.cosmology import FlatLambdaCDM
+from astropy import constants as const
 from UFalcon import utils, shells
 
 
@@ -77,7 +78,7 @@ def test_read_file():
 
     with mock.patch('UFalcon.shells.read_lpicola') as read_lpicola:
         read_lpicola.return_value = 1
-        assert shells.read_file(None, None, PyCosmo.Cosmo(), file_format='l-picola') == 1
+        assert shells.read_file(None, None, FlatLambdaCDM(H0=70, Om0=0.3, Ode0=0.7), file_format='l-picola') == 1
 
     with mock.patch('UFalcon.shells.read_pkdgrav') as read_pkdgrav:
         read_pkdgrav.return_value = 1
@@ -103,7 +104,7 @@ def test_xyz_to_spherical():
 
 def test_thetaphi_to_pixelcounts():
     """
-    Test the conversion from angular coordinates to number counts in healpix pixels.
+    Tests the conversion from angular coordinates to number counts in healpix pixels.
     """
     # create random healpix map
     nside = 512
@@ -136,7 +137,7 @@ def test_construct_shells():
     cosmo = PyCosmo.Cosmo()
 
     # compute comoving distances to the edges of the shells
-    comoving_distances_shells = [utils.comoving_distance(0, z, cosmo) for z in z_shells]
+    comoving_distances_shells = [utils.comoving_distance(0, z, cosmo, const) for z in z_shells]
 
     # create random sets of positions located inside one shell each
     pos = np.random.uniform(low=-1, high=1, size=(len(z_shells) - 1, n_particles_per_shell, 3))
@@ -161,7 +162,7 @@ def test_construct_shells():
         listdir.return_value = list(map(lambda x: str(x) + '_lightcone.', range(pos.shape[0])))  # as many "filenames" as we have sets of particle positions
 
         with mock.patch('UFalcon.shells.read_file', side_effect=read_file_side_effect):
-            particle_shells = shells.construct_shells('', z_shells, None, cosmo, nside)
+            particle_shells = shells.construct_shells('', z_shells, None, cosmo, const, nside)
 
     # check results
     assert particle_shells.shape[0] == pos.shape[0]
@@ -178,4 +179,4 @@ def test_construct_shells():
 
     # test error raising
     with pytest.raises(ValueError):
-        shells.construct_shells(None, None, None, None, None, file_format='wrong')
+        shells.construct_shells(None, None, None, None, None, None, file_format='wrong')
