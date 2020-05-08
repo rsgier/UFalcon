@@ -4,9 +4,9 @@ UFalcon - Version 0.1.0
 
 UFalcon - Ultra Fast Lightcone
 
-Package for constructing full-sky lightcones from N-Body simulation output. Written in Python 3.
+Package for constructing full-sky maps from lightcones based on N-Body simulation output. Written in Python 3.
 
-Introduced in `Sgier et al. 2019 <https://iopscience.iop.org/article/10.1088/1475-7516/2019/01/044>`_ and Sgier et al. 2020.
+Introduced in `Sgier et al. 2019 <https://iopscience.iop.org/article/10.1088/1475-7516/2019/01/044>`_ and Sgier et al. 2020 (in prep.).
 
 N-Body Simulations
 --------
@@ -16,7 +16,7 @@ Currently supported N-Body simulation codes are:
 * PKDGRAV3 (`Potter et al. 2016 <https://arxiv.org/abs/1609.08621>`_) available `here <https://bitbucket.org/dpotter/pkdgrav3/src/master/>`_.
 * L-PICOLA (`Howlett et al. 2015 <https://arxiv.org/abs/1506.03737>`_) available `here <https://cullanhowlett.github.io/l-picola/>`_.
 
-Note that UFalcon currently only supports post-processing of simulation output generated in lightcone mode.
+Note that UFalcon currently only supports post-processing of simulation output generated in <b>lightcone mode</b>.
 
 Features
 --------
