@@ -86,7 +86,7 @@ class Dirac:
         """
         self.z_source = z_source
 
-    def __call__(self, z_low, z_up, cosmo):
+    def __call__(self, z_low, z_up, cosmo, const):
         """
         Computes the lensing weights for the redshift interval [z_low, z_up].
         :param z_low: lower end of the redshift interval

@@ -26,7 +26,7 @@ def test_one_over_e(cosmo):
         assert utils.one_over_e(z, cosmo) == 1 / np.sqrt(omega_m * (1 + z) ** 3 + omega_l)
 
 
-def test_comoving_distance(cosmo, const):
+def test_comoving_distance(cosmo):
     """
     Test the computation of the comoving distance.
     """

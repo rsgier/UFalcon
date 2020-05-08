@@ -6,7 +6,6 @@ import numpy as np
 import healpy as hp
 from UFalcon import utils
 
-
 def read_lpicola(path, h, boxsize):
     """
     Reads in a binary data file produced by L-Picola.

@@ -12,7 +12,8 @@ import numpy as np
 import healpy as hp
 import h5py
 import UFalcon
-import PyCosmo
+from astropy.cosmology import FlatLambdaCDM
+from astropy import constants as const
 
 
 def get_single_source_redshifts(zs_str):
@@ -93,7 +94,7 @@ def store_output(kappa_maps, single_source_redshifts, paths_out, combine_nz_maps
                 fh5['gamma2'][i] = gamma2
 
 
-def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_up, cosmo, n_particles):
+def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_up, cosmo, const, n_particles):
     """
     Computes kappa-maps from precomputed shells in hdf5-format containing particles counts
     :param paths_shells: path to shells
@@ -102,7 +103,8 @@ def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_u
     :param boxsizes: size of the box in Gigaparsec
     :param zs_low: lower redshift-bound for the lightcone construction
     :param zs_up: upper redshift-bound for the lightcone construction
-    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :param cosmo: Astropy.Cosmo instance, controls the cosmology used
+    :param const: Astropy.Const instance, used for various constants
     :param n_particles: total number of parciles used in the N-Body simulation, i.e. (No. of part. per side)^3
     :return: kappa-maps with shape ((len(lensing_weights), Npix)
     """
@@ -141,23 +143,25 @@ def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_u
                 shell *= UFalcon.lensing_weights.kappa_prefactor(n_pix=shell.size,
                                                                  n_particles=n_particles,
                                                                  boxsize=boxsize,
-                                                                 cosmo=cosmo)
+                                                                 cosmo=cosmo,
+                                                                 const=const)
 
                 # compute lensing weights and add to kappa maps
                 for i_w, lensing_weighter in enumerate(lensing_weighters):
-                    kappa[i_w] += shell * lensing_weighter(z_shell_low, z_shell_up, cosmo)
+                    kappa[i_w] += shell * lensing_weighter(z_shell_low, z_shell_up, cosmo, const)
 
     return kappa
 
 
-def add_shells_pkdgrav(dirpath, lensing_weighters_cont, single_source_redshifts, nside, cosmo, n_particles, boxsize):
+def add_shells_pkdgrav(dirpath, lensing_weighters_cont, single_source_redshifts, nside, cosmo, const, n_particles, boxsize):
     """
     Computes kappa-maps from precomputed shells in fits-format containing particles counts
     :param dirpath: path to directory containing the fits-files
     :param lensing_weighters_cont: lensing weights for a continuous, user-defined n(z) distribution
     :param single_source_redshifts: array containing single-source redshifts
     :param nside: nside of output maps
-    :param cosmo: PyCosmo.Cosmo instance, controls the cosmology used
+    :param cosmo: Astropy.Cosmo instance, controls the cosmology used
+    :param const: Astropy.Const instance, used for various constants
     :param n_particles: total number of parciles used in the N-Body simulation, i.e. (No. of part. per side)^3
     :param boxsize: size of the box in Gigaparsec
     :return: kappa-maps with shape ((len(lensing_weights), Npix)
@@ -199,11 +203,12 @@ def add_shells_pkdgrav(dirpath, lensing_weighters_cont, single_source_redshifts,
         shell *= UFalcon.lensing_weights.kappa_prefactor(n_pix=shell.size,
                                                          n_particles=n_particles,
                                                          boxsize=boxsize,
-                                                         cosmo=cosmo)
+                                                         cosmo=cosmo,
+                                                         const=const)
 
         # compute lensing weights and add to kappa maps
         for i_w, lensing_weighter in enumerate(lensing_weighters):
-            kappa[i_w] += shell * lensing_weighter(z_shells_low[i], z_shells_up[i], cosmo)
+            kappa[i_w] += shell * lensing_weighter(z_shells_low[i], z_shells_up[i], cosmo, const)
 
     return kappa
 
@@ -242,8 +247,7 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
         config = yaml.load(f)
 
     # get cosmo instance
-    cosmo = PyCosmo.Cosmo(config.get('pycosmo_config'))
-    cosmo.set(**config.get('cosmology', dict()))
+    cosmo = FlatLambdaCDM(config.get('cosmology'))
 
     # get continuous lensing weighters
     try:
@@ -265,6 +269,7 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
                                    single_source_redshifts,
                                    nside,
                                    cosmo,
+                                   const,
                                    config['n_particles'],
                                    config['boxsize'])
     else:
@@ -277,6 +282,7 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
                               config['z_low'],
                               config['z_up'],
                               cosmo,
+                              const,
                               config['n_particles'])
 
     # store results

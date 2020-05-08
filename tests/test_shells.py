@@ -78,7 +78,7 @@ def test_read_file():
 
     with mock.patch('UFalcon.shells.read_lpicola') as read_lpicola:
         read_lpicola.return_value = 1
-        assert shells.read_file(None, None, FlatLambdaCDM(H0=70, Om0=0.3, Ode0=0.7), file_format='l-picola') == 1
+        assert shells.read_file(None, None, FlatLambdaCDM(H0=70, Om0=0.3), file_format='l-picola') == 1
 
     with mock.patch('UFalcon.shells.read_pkdgrav') as read_pkdgrav:
         read_pkdgrav.return_value = 1
@@ -134,7 +134,8 @@ def test_construct_shells():
     nside = 512
     z_shells = [0, 0.1, 0.5, 1]
     n_particles_per_shell = 100
-    cosmo = PyCosmo.Cosmo()
+
+    cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
     # compute comoving distances to the edges of the shells
     comoving_distances_shells = [utils.comoving_distance(0, z, cosmo, const) for z in z_shells]

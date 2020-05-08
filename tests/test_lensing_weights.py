@@ -5,8 +5,8 @@ from unittest import mock
 import pytest
 import numpy as np
 from scipy import stats
+from astropy.cosmology import FlatLambdaCDM
 from astropy import constants as const
-import PyCosmo
 
 from UFalcon import lensing_weights
 
@@ -32,14 +32,14 @@ def test_dirac(cosmo):
                                   (1.3, 1.2,  1.21),
                                   (1.5, 1.4,  1.41)]:
 
-        assert lensing_weights.Dirac(z_source)(z_low, z_up, cosmo) > 0
+        assert lensing_weights.Dirac(z_source)(z_low, z_up, cosmo, const) > 0
 
     # source redshift below shell
-    assert lensing_weights.Dirac(0.3)(0.5, 0.6, cosmo) == 0
+    assert lensing_weights.Dirac(0.3)(0.5, 0.6, cosmo, const) == 0
 
     # source redshift inside shell
     with pytest.raises(NotImplementedError):
-        lensing_weights.Dirac(0.3)(0.2, 0.6, cosmo)
+        lensing_weights.Dirac(0.3)(0.2, 0.6, cosmo, const)
 
     # check that weight amplitude is sensible (there is more lensing in the middle than at the beginning or the end)
     w_dirac = lensing_weights.Dirac(1)
@@ -48,7 +48,7 @@ def test_dirac(cosmo):
     #assert w_dirac(0.7, 0.71, cosmo) < w_dirac(0.5, 0.51, cosmo)
 
 
-def test_continuous_to_dirac(cosmo, const):
+def test_continuous_to_dirac(cosmo):
     """
     Test if lensing weights for continuous n(z) converge towards single-source weights for n(z) ~ Dirac-delta.
     """
@@ -60,7 +60,7 @@ def test_continuous_to_dirac(cosmo, const):
                                   (1.5, 1.4, 1.41)]:
 
         # compute Dirac weight
-        w_dirac = lensing_weights.Dirac(z_source)(z_low, z_up, cosmo)
+        w_dirac = lensing_weights.Dirac(z_source)(z_low, z_up, cosmo, const)
 
         # compute continuous weight
         with mock.patch('numpy.genfromtxt') as genfromtxt:
@@ -75,7 +75,7 @@ def test_continuous_to_dirac(cosmo, const):
         assert (w_dirac - w_cont) / w_cont < 0.01
 
 
-def test_dirac_to_continuous(cosmo, const):
+def test_dirac_to_continuous(cosmo):
     """
     Test if lensing weights for a continuous n(z) can be approximated by many single-source weights with source
     redshifts sampled from n(z).
@@ -107,7 +107,7 @@ def test_dirac_to_continuous(cosmo, const):
     w_dirac = 0
 
     for i, z_source in enumerate(zs_source):
-        w_dirac += lensing_weights.Dirac(z_source)(z_low, z_up, cosmo)
+        w_dirac += lensing_weights.Dirac(z_source)(z_low, z_up, cosmo, const)
 
     w_dirac /= zs_source.size
 
@@ -115,13 +115,13 @@ def test_dirac_to_continuous(cosmo, const):
     assert (w_dirac - w_cont) / w_cont < 0.01
 
 
-def test_kappa_prefactor(cosmo, const):
+def test_kappa_prefactor(cosmo):
     """
     Test the computation of the prefactor to convert to convergence.
     """
     n_pix = 17395392
     n_particles = 1024 ** 3
     boxsize = 6
-    f = lensing_weights.kappa_prefactor(n_pix, n_particles, boxsize, cosmo)
+    f = lensing_weights.kappa_prefactor(n_pix, n_particles, boxsize, cosmo, const)
     assert '{:.18f}'.format(f) == str(0.001595227993431627)
 

@@ -9,7 +9,8 @@ import argparse
 import numpy as np
 import yaml
 import h5py
-import PyCosmo
+from astropy.cosmology import FlatLambdaCDM
+from astropy import constants as const
 import UFalcon
 
 
@@ -52,14 +53,14 @@ def main(path_config, dirpath_in, sim_type, boxsize, nside, path_out):
     z = get_redshifts(config['z_init'], config['z_final'], config['delta_z'])
 
     # get cosmo instance
-    cosmo = PyCosmo.Cosmo(config.get('pycosmo_config'))
-    cosmo.set(**config.get('cosmology', dict()))
+    cosmo = FlatLambdaCDM(config.get('cosmology'))
 
     # compute shells
     shells = UFalcon.shells.construct_shells(dirpath=dirpath_in,
                                              z_shells=z,
                                              boxsize=boxsize,
                                              cosmo=cosmo,
+                                             const=const,
                                              nside=nside,
                                              file_format=sim_type)
 
