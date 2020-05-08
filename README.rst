@@ -16,7 +16,7 @@ Currently supported N-Body simulation codes are:
 * PKDGRAV3 (`Potter et al. 2016 <https://arxiv.org/abs/1609.08621>`_) available `here <https://bitbucket.org/dpotter/pkdgrav3/src/master/>`_.
 * L-PICOLA (`Howlett et al. 2015 <https://arxiv.org/abs/1506.03737>`_) available `here <https://cullanhowlett.github.io/l-picola/>`_.
 
-Note that UFalcon currently only supports post-processing of simulation output generated in <span style="font-weight:bold">lightcone mode</span>.
+Note that UFalcon currently only supports post-processing of simulation output generated in lightcone mode.
 
 Features
 --------
