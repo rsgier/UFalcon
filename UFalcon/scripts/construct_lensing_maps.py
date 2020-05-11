@@ -94,13 +94,13 @@ def store_output(kappa_maps, single_source_redshifts, paths_out, combine_nz_maps
                 fh5['gamma2'][i] = gamma2
 
 
-def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_up, cosmo, const, n_particles):
+def add_shells_h5(paths_shells, lensing_weighters, nside, boxsize, zs_low, zs_up, cosmo, const, n_particles):
     """
     Computes kappa-maps from precomputed shells in hdf5-format containing particles counts
     :param paths_shells: path to shells
     :param lensing_weighters: lensing weights for continuous n(z)-dist and single-source redshifts, in this order
     :param nside: nside of output maps
-    :param boxsizes: size of the box in Gigaparsec
+    :param boxsize: size of the box in Gigaparsec
     :param zs_low: lower redshift-bound for the lightcone construction
     :param zs_up: upper redshift-bound for the lightcone construction
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
@@ -112,11 +112,13 @@ def add_shells_h5(paths_shells, lensing_weighters, nside, boxsizes, zs_low, zs_u
     # add up shells
     kappa = np.zeros((len(lensing_weighters), hp.nside2npix(nside)), dtype=np.float32)
 
+    zs_low_arr = np.arange(zs_low['min'], zs_low['max'], zs_low['delta_z'])
+    zs_up_arr = np.arange(zs_up['min'], zs_up['max'], zs_up['delta_z'])
+
     for i_shells, path in enumerate(paths_shells):
 
-        boxsize = boxsizes[i_shells]
-        z_low = zs_low[i_shells]
-        z_up = zs_up[i_shells]
+        z_low = zs_low_arr[i_shells]
+        z_up = zs_up_arr[i_shells]
 
         print('Processing shells {} / {}, path: {}'.format(i_shells + 1, len(paths_shells), path), flush=True)
 
@@ -247,12 +249,14 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
         config = yaml.load(f)
 
     # get cosmo instance
-    cosmo = FlatLambdaCDM(config.get('cosmology'))
+
+    cosmo_params = config.get('cosmology')
+    cosmo = FlatLambdaCDM(H0=cosmo_params['H0'], Om0=cosmo_params['Om0'])
 
     # get continuous lensing weighters
     try:
-        z_lim_low = min(config['z_low'])
-        z_lim_up = max(config['z_up'])
+        z_lim_low = config['z_low']['min']
+        z_lim_up = config['z_up']['max']
     except TypeError:
         z_lim_low = config['z_low']
         z_lim_up = config['z_up']
@@ -278,7 +282,7 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
         kappa = add_shells_h5(paths_shells,
                               lensing_weighters,
                               nside,
-                              config['boxsizes'],
+                              config['boxsize'],
                               config['z_low'],
                               config['z_up'],
                               cosmo,

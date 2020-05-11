@@ -53,7 +53,8 @@ def main(path_config, dirpath_in, sim_type, boxsize, nside, path_out):
     z = get_redshifts(config['z_init'], config['z_final'], config['delta_z'])
 
     # get cosmo instance
-    cosmo = FlatLambdaCDM(config.get('cosmology'))
+    cosmo_params = config.get('cosmology')
+    cosmo = FlatLambdaCDM(H0=cosmo_params['H0'], Om0=cosmo_params['Om0'])
 
     # compute shells
     shells = UFalcon.shells.construct_shells(dirpath=dirpath_in,
