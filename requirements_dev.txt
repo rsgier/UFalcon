@@ -11,4 +11,4 @@ coverage
 sphinx-pynpoint-theme
 tox
 
-PyCosmo
+Astropy
