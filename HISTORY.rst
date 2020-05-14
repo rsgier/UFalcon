@@ -12,3 +12,11 @@ History
 ++++++++++++++++++
 
 * First version on TestPyPI
+
+0.2.0 (2020-05-14)
+++++++++++++++++++
+
+* Completely moved all cosmological computation to astropy
+* support for continuous (not tabulated) redshift distribution
+* Run external test with established pipeline
+* Extended tests for lensing weights

@@ -1,5 +1,5 @@
 =============================
-UFalcon - Version 0.1.0
+UFalcon - Version 0.2.0
 =============================
 
 UFalcon - Ultra Fast Lightcone
