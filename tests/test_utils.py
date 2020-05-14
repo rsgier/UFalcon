@@ -26,4 +26,4 @@ def test_comoving_distance(cosmo):
         com_utils = utils.comoving_distance(zl, zu, cosmo)
         com_astropy = cosmo.comoving_distance(zu).value - cosmo.comoving_distance(zl).value
 
-        assert (com_utils - com_astropy) / com_astropy < 0.01
+        assert (com_utils - com_astropy) / com_astropy < 1e-8
