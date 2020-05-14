@@ -5,7 +5,9 @@ import numpy as np
 import scipy.integrate as integrate
 from scipy.interpolate import interp1d
 
-from UFalcon import utils
+from UFalcon import utils, constants
+
+
 
 
 class Continuous:
@@ -37,13 +39,12 @@ class Continuous:
         self.IA = IA
         self.lightcone_points = nz[np.logical_and(z_lim_low < nz[:,0], nz[:,0] < z_lim_up),0]
 
-    def __call__(self, z_low, z_up, cosmo, const):
+    def __call__(self, z_low, z_up, cosmo):
         """
         Computes the lensing weights for the redshift interval [z_low, z_up].
         :param z_low: lower end of the redshift interval
         :param z_up: upper end of the redshift interval
         :param cosmo: Astropy.Cosmo instance, controls the cosmology used
-        :param const: Astropy.Const instance, used for various constants
         :return: lensing weight
         """
         norm = utils.dimensionless_comoving_distance(z_low, z_up, cosmo) * self.nz_norm
@@ -60,7 +61,7 @@ class Continuous:
         else:
             # lengsing weights for IA
             numerator = (2.0/(3.0*cosmo.Om0)) * \
-                        (const.c.to("km / s").value / cosmo.H0.value) * \
+                        (constants.c / cosmo.H0.value) * \
                         w_IA(self.IA, z_low, z_up, cosmo, self.nz_intpt, self.lightcone_points, self.z_lim_low, self.z_lim_up)
 
         return numerator / norm
@@ -86,7 +87,7 @@ class Dirac:
         """
         self.z_source = z_source
 
-    def __call__(self, z_low, z_up, cosmo, const):
+    def __call__(self, z_low, z_up, cosmo):
         """
         Computes the lensing weights for the redshift interval [z_low, z_up].
         :param z_low: lower end of the redshift interval
@@ -127,7 +128,7 @@ class Dirac:
                utils.one_over_e(x, cosmo)
 
 
-def kappa_prefactor(n_pix, n_particles, boxsize, cosmo, const):
+def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
     """
     Computes the prefactor to transform from number of particles to convergence, see https://arxiv.org/abs/0807.3651,
     eq. (A.1).
@@ -135,12 +136,11 @@ def kappa_prefactor(n_pix, n_particles, boxsize, cosmo, const):
     :param n_particles: number of particles
     :param boxsize: size of the box in Gigaparsec
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
-    :param const: Astropy.Const instance, used for various constants
     :return: convergence prefactor
     """
     convergence_factor = (3.0 * cosmo.Om0 / 2.0) * \
                          (n_pix / (4.0 * np.pi)) * \
-                         (cosmo.H0.value / const.c.to("km / s").value) ** 3 * \
+                         (cosmo.H0.value / constants.c) ** 3 * \
                          (boxsize * 1000.0) ** 3 / n_particles
     return convergence_factor
 
@@ -175,7 +175,7 @@ def F_NIA_model(z, IA, cosmo):
     return -IA * rho_c * C1 * cosmo.Om0 / g
 
 
-def w_IA(IA, z_low, z_up, cosmo, const, nz_intpt, points, z_lower_bound, z_upper_bound):
+def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points, z_lower_bound, z_upper_bound):
     """
     Calculates the weight per slice for the NIA model given a 
     distribution of source redshifts n(z).
@@ -183,7 +183,6 @@ def w_IA(IA, z_low, z_up, cosmo, const, nz_intpt, points, z_lower_bound, z_upper
     :param z_low: Lower redshift limit of the shell
     :param z_up: Upper redshift limit of the shell
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
-    :param const: Astropy.Const instance, used for various constants
     :param nz_intpt: nz function
     :param points: Points in redshift where integrad is evaluated 
     :param z_lower_bound: Absolute lower bound for reshift
@@ -191,7 +190,7 @@ def w_IA(IA, z_low, z_up, cosmo, const, nz_intpt, points, z_lower_bound, z_upper
     :return: Shell weight for NIA model
     """
     def f(x, IA, cosmo, nz_intpt):
-        return cosmo.H0.value / const.c.to("km / s").value * (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
+        return cosmo.H0.value / constants.c * (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
 
     points = points[np.logical_and(z_lower_bound < points, points < z_upper_bound)]
     dbl = integrate.quad(f, z_low, z_up, args=(IA, cosmo, nz_intpt), points=points[np.logical_and(z_low < points, points < z_up)])[0]

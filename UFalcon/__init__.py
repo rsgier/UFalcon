@@ -1,5 +1,5 @@
 import pkg_resources
-from . import lensing_weights, shells, utils
+from . import lensing_weights, shells, utils, constants
 
 __author__ = 'Raphael Sgier'
 __email__ = 'rsgier@phys.ethz.ch'

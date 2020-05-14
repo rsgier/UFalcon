@@ -29,13 +29,12 @@ def dimensionless_comoving_distance(z_low, z_up, cosmo):
     return dimless_com
 
 
-def comoving_distance(z_low, z_up, cosmo, const):
+def comoving_distance(z_low, z_up, cosmo):
     """
     Computes the comoving distance between two redshifts. Scalar input only.
     :param z_low: lower redshift
     :param z_up: upper redshift, must have same shape as z_low
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
-    :param const: Astropy.Const instance, used for various constants
     :return: comoving distance
     """
     com = dimensionless_comoving_distance(z_low, z_up, cosmo) * const.c.to("km / s").value / cosmo.H0.value
