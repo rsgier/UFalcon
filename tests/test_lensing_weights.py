@@ -61,17 +61,24 @@ def test_continuous_to_dirac(cosmo):
         # compute Dirac weight
         w_dirac = lensing_weights.Dirac(z_source)(z_low, z_up, cosmo)
 
-        # compute continuous weight
+        # compute continuous weight with a tabulated function
         with mock.patch('numpy.genfromtxt') as genfromtxt:
-            genfromtxt.return_value = np.array([[0.0, 0.0],
-                                                [0.2, 0.05],
-                                                [0.4, 0.01],
-                                                [0.6, 0.1]])  # something which has the correct shape
+            # tabulated delta function
+            genfromtxt.return_value = np.array([[z_source - 0.001, 0.0],
+                                                [z_source, 1.0],
+                                                [z_source + 0.001, 0.0]])
+            # get the weights
             cont_weights = lensing_weights.Continuous(None, z_lim_low=0, z_lim_up=2)
 
-        cont_weights.nz_intpt = stats.norm(loc=z_source, scale=0.005).pdf  # set n(z) interpolator to approximate Dirac
-        cont_weights.nz_norm = 1
+        w_cont = cont_weights(z_low, z_up, cosmo)
+        print(w_cont)
 
+        assert (w_dirac - w_cont) / w_cont < 0.01
+
+        # compute continous weights with gaussian delta dist
+        n_of_z = stats.norm(loc=z_source, scale=0.005).pdf  # set n(z) interpolator to approximate Dirac
+        # get the weights
+        cont_weights = lensing_weights.Continuous(n_of_z, z_lim_low=0, z_lim_up=2)
         w_cont = cont_weights(z_low, z_up, cosmo)
 
         assert (w_dirac - w_cont) / w_cont < 0.01
