@@ -138,7 +138,7 @@ def test_construct_shells():
     cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
     # compute comoving distances to the edges of the shells
-    comoving_distances_shells = [utils.comoving_distance(0, z, cosmo, const) for z in z_shells]
+    comoving_distances_shells = [utils.comoving_distance(0, z, cosmo) for z in z_shells]
 
     # create random sets of positions located inside one shell each
     pos = np.random.uniform(low=-1, high=1, size=(len(z_shells) - 1, n_particles_per_shell, 3))
@@ -180,4 +180,4 @@ def test_construct_shells():
 
     # test error raising
     with pytest.raises(ValueError):
-        shells.construct_shells(None, None, None, None, None, None, file_format='wrong')
+        shells.construct_shells(None, None, None, None, None, file_format='wrong')
