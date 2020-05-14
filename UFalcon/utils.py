@@ -47,7 +47,7 @@ def kappa_to_gamma(kappa_map, lmax=None):
     l = hp.Alm.getlm(lmax)[0]
 
     # Add the appropriate factor to the kappa_alm
-    fac = np.where(np.logical_and(l != 1, l != 0), np.sqrt(((l + 2.0) * (l - 1))/((l + 1) * l)), 0)
+    fac = np.where(np.logical_and(l != 1, l != 0), -np.sqrt(((l + 2.0) * (l - 1))/((l + 1) * l)), 0)
     kappa_alm *= fac
     t, q, u = hp.alm2map([np.zeros_like(kappa_alm), kappa_alm, np.zeros_like(kappa_alm)], nside=nside)
 
