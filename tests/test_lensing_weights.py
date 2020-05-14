@@ -100,15 +100,8 @@ def test_dirac_to_continuous(cosmo):
     z_up = 0.31
 
     # compute continuous lensing weight
-    with mock.patch('numpy.genfromtxt') as genfromtxt:
-        genfromtxt.return_value = np.array([[0.0, 0.0],
-                                            [0.2, 0.05],
-                                            [0.4, 0.01],
-                                            [0.6, 0.1]])  # something which has the correct shape
-        cont_weights = lensing_weights.Continuous(None, z_lim_low=0, z_lim_up=2)
+    cont_weights = lensing_weights.Continuous(nz.pdf, z_lim_low=0, z_lim_up=2)
 
-    cont_weights.nz_intpt = nz.pdf
-    cont_weights.nz_norm = 1
     w_cont = cont_weights(z_low, z_up, cosmo)
 
     # sample source redshifts
