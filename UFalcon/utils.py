@@ -4,18 +4,7 @@
 import numpy as np
 from scipy import integrate
 import healpy as hp
-
-
-def one_over_e(z, cosmo):
-    """
-    Computes the function 1 / E(z) = (Omega_m * (1 + z)^3 + Omega_Lambda)^(-1/2).
-    :param z: redshift
-    :param cosmo: Astropy.Cosmo instance, controls the cosmology used
-    :return: 1 / E(z)
-    """
-    ez = 1 / np.sqrt(cosmo.Om0 * (1 + z) ** 3 + cosmo.Ode0)
-    return ez
-
+from UFalcon import constants
 
 def dimensionless_comoving_distance(z_low, z_up, cosmo):
     """
@@ -25,7 +14,7 @@ def dimensionless_comoving_distance(z_low, z_up, cosmo):
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
     :return: dimensionless comoving distance
     """
-    dimless_com = integrate.quad(one_over_e, z_low, z_up, args=(cosmo,))[0]
+    dimless_com = integrate.quad(cosmo.inv_efunc, z_low, z_up)[0]
     return dimless_com
 
 
@@ -37,7 +26,7 @@ def comoving_distance(z_low, z_up, cosmo):
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
     :return: comoving distance
     """
-    com = dimensionless_comoving_distance(z_low, z_up, cosmo) * const.c.to("km / s").value / cosmo.H0.value
+    com = dimensionless_comoving_distance(z_low, z_up, cosmo) * constants.c / cosmo.H0.value
     return com
 
 

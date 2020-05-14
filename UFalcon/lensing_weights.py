@@ -15,18 +15,18 @@ class Continuous:
     Computes the lensing weights for a continuous, user-defined n(z) distribution.
     """
 
-    def __init__(self, path_nz, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=0.0):
+    def __init__(self, path_nz, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=None):
         """
         Constructor.
-        :param path_nz: path to file containing n(z), assumed to be a text file readable with numpy.genfromtext with
-                        the first column containing z and the second column containing n(z).
+        :param path_nz: either path to file containing n(z), assumed to be a text file readable with numpy.genfromtext
+                        with the first column containing z and the second column containing n(z), or a callable that
+                        is directly a redshift distribution
         :param z_lim_low: lower integration limit to use for n(z) normalization, default: 0
         :param z_lim_up: upper integration limit to use for n(z) normalization, default: last z-coordinate in n(z) file
         :param shift_nz: Can shift the n(z) function by some redshift (intended for easier implementation of photo z bias)
-        :param IA: Intrinsic Alignment. If unequal 0 computes the lensing weights for IA component
+        :param IA: Intrinsic Alignment. If not None computes the lensing weights for IA component
                         (needs to be added to the weights without IA afterwards)
         """
-
         nz = np.genfromtxt(path_nz)
 
         if z_lim_up is None:
@@ -35,9 +35,10 @@ class Continuous:
         self.z_lim_up = z_lim_up
         self.z_lim_low = z_lim_low
         self.nz_intpt = interp1d(nz[:, 0] - shift_nz, nz[:, 1], bounds_error=False, fill_value=0.0)
-        self.nz_norm = integrate.quad(lambda x: self.nz_intpt(x), z_lim_low, self.z_lim_up)[0]
         self.IA = IA
         self.lightcone_points = nz[np.logical_and(z_lim_low < nz[:,0], nz[:,0] < z_lim_up),0]
+        self.nz_norm = integrate.quad(self.nz_intpt, z_lim_low, self.z_lim_up, points=self.lightcone_points,
+                                      limit=10*len(self.lightcone_points))[0]
 
     def __call__(self, z_low, z_up, cosmo):
         """
@@ -50,7 +51,7 @@ class Continuous:
         norm = utils.dimensionless_comoving_distance(z_low, z_up, cosmo) * self.nz_norm
         norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
 
-        if np.isclose(self.IA, 0.0):
+        if self.IA is None:
             # lensing weights without IA
             numerator = integrate.dblquad(self._integrand,
                                           z_low,
@@ -62,7 +63,7 @@ class Continuous:
             # lengsing weights for IA
             numerator = (2.0/(3.0*cosmo.Om0)) * \
                         (constants.c / cosmo.H0.value) * \
-                        w_IA(self.IA, z_low, z_up, cosmo, self.nz_intpt, self.lightcone_points, self.z_lim_low, self.z_lim_up)
+                        w_IA(self.IA, z_low, z_up, cosmo, self.nz_intpt, points=self.lightcone_points)
 
         return numerator / norm
 
@@ -71,7 +72,7 @@ class Continuous:
                utils.dimensionless_comoving_distance(0, x, cosmo) * \
                utils.dimensionless_comoving_distance(x, y, cosmo) * \
                (1 + x) * \
-               utils.one_over_e(x, cosmo) / \
+               cosmo.inv_efunc(x) / \
                utils.dimensionless_comoving_distance(0, y, cosmo)
 
 
@@ -125,7 +126,7 @@ class Dirac:
         return utils.dimensionless_comoving_distance(0, x, cosmo) * \
                utils.dimensionless_comoving_distance(x, self.z_source, cosmo) * \
                (1 + x) * \
-               utils.one_over_e(x, cosmo)
+               cosmo.inv_efunc(x)
 
 
 def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
@@ -153,29 +154,30 @@ def F_NIA_model(z, IA, cosmo):
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
     :return: NIA kernel at redshift z
     """
-    growth = lambda a: 1.0 / (a**3.0 * (cosmo.Om0 * a**-3.0 + (1.0 - cosmo.Om0))**1.5)
+    OmegaM = cosmo.Om0
+    H0 = 100.0*cosmo.h
+
+    # growth factor calculation
+    growth = lambda a: 1.0 / (a * cosmo.H(1.0 / a - 1.0).value)**3.0
     a = 1.0 / (1.0 + z)
-    g = 5.0 * cosmo.Om0 / 2.0 * np.sqrt(cosmo.Om0 * a**-3.0 + (1.0 - cosmo.Om0)) * integrate.quad(growth, 0, a)[0]
+    g = 5.0 * OmegaM / 2.0 * cosmo.efunc(z) * integrate.quad(growth, 0, a)[0]
 
     # Calculate the growth factor today
-    g_norm = 5.0 * cosmo.Om0 / 2.0 * integrate.quad(growth, 0, 1)[0]
+    g_norm = 5.0 * OmegaM / 2.0 * integrate.quad(growth, 0, 1)[0]
 
     # divide out a
     g = g / g_norm
 
-    #made to cancel with units
-    G = 4.301e-9
-
-    # critical density today
-    rho_c = 3 * (cosmo.params.H0)**2 / (8 * np.pi * G)
+    # critical density today = 3*H^2/(8piG)
+    rho_c = cosmo.critical_density0.to("Msun Mpc^-3").value
 
     # Proportionality constant Msun^-1 Mpc^3
-    C1 = 5e-14 / (cosmo.H0.value / 100.0)**2
+    C1 = 5e-14 / (H0/100.0) ** 2
 
-    return -IA * rho_c * C1 * cosmo.Om0 / g
+    return -IA * rho_c * C1 * OmegaM / g
 
 
-def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points, z_lower_bound, z_upper_bound):
+def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points=None):
     """
     Calculates the weight per slice for the NIA model given a 
     distribution of source redshifts n(z).
@@ -184,15 +186,17 @@ def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points, z_lower_bound, z_upper_bound)
     :param z_up: Upper redshift limit of the shell
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
     :param nz_intpt: nz function
-    :param points: Points in redshift where integrad is evaluated 
-    :param z_lower_bound: Absolute lower bound for reshift
-    :param z_upper_bound: Absolute upper bound for reshift
+    :param points: Points in redshift where integrad is evaluated (used for better numerical integration), can be None
     :return: Shell weight for NIA model
-    """
-    def f(x, IA, cosmo, nz_intpt):
-        return cosmo.H0.value / constants.c * (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
 
-    points = points[np.logical_and(z_lower_bound < points, points < z_upper_bound)]
-    dbl = integrate.quad(f, z_low, z_up, args=(IA, cosmo, nz_intpt), points=points[np.logical_and(z_low < points, points < z_up)])[0]
+    """
+
+    def f(x):
+        return 100*cosmo.h / constants.c * (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
+
+    if points is not None:
+        dbl = integrate.quad(f, z_low, z_up, points=points[np.logical_and(z_low < points, points < z_up)])[0]
+    else:
+        dbl = integrate.quad(f, z_low, z_up)[0]
 
     return dbl
