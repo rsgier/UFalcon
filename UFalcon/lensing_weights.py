@@ -37,8 +37,16 @@ class Continuous:
         self.nz_intpt = interp1d(nz[:, 0] - shift_nz, nz[:, 1], bounds_error=False, fill_value=0.0)
         self.IA = IA
         self.lightcone_points = nz[np.logical_and(z_lim_low < nz[:,0], nz[:,0] < z_lim_up),0]
-        self.nz_norm = integrate.quad(self.nz_intpt, z_lim_low, self.z_lim_up, points=self.lightcone_points,
-                                      limit=10*len(self.lightcone_points))[0]
+
+        # check if there are any points remaining for the integration
+        if len(self.lightcone_points) == 0:
+            self.lightcone_points = None
+            limit = 1000
+        else:
+            limit = 10*len(self.lightcone_points)
+
+        self.nz_norm = integrate.quad(lambda x: self.nz_intpt(x), z_lim_low, self.z_lim_up,
+                                      points=self.lightcone_points, limit=limit)[0]
 
     def __call__(self, z_low, z_up, cosmo):
         """

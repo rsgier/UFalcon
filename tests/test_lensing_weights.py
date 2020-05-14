@@ -6,7 +6,6 @@ import pytest
 import numpy as np
 from scipy import stats
 from astropy.cosmology import FlatLambdaCDM
-from astropy import constants as const
 
 from UFalcon import lensing_weights
 
@@ -32,14 +31,14 @@ def test_dirac(cosmo):
                                   (1.3, 1.2,  1.21),
                                   (1.5, 1.4,  1.41)]:
 
-        assert lensing_weights.Dirac(z_source)(z_low, z_up, cosmo, const) > 0
+        assert lensing_weights.Dirac(z_source)(z_low, z_up, cosmo) > 0
 
     # source redshift below shell
-    assert lensing_weights.Dirac(0.3)(0.5, 0.6, cosmo, const) == 0
+    assert lensing_weights.Dirac(0.3)(0.5, 0.6, cosmo) == 0
 
     # source redshift inside shell
     with pytest.raises(NotImplementedError):
-        lensing_weights.Dirac(0.3)(0.2, 0.6, cosmo, const)
+        lensing_weights.Dirac(0.3)(0.2, 0.6, cosmo)
 
     # check that weight amplitude is sensible (there is more lensing in the middle than at the beginning or the end)
     w_dirac = lensing_weights.Dirac(1)
@@ -60,17 +59,20 @@ def test_continuous_to_dirac(cosmo):
                                   (1.5, 1.4, 1.41)]:
 
         # compute Dirac weight
-        w_dirac = lensing_weights.Dirac(z_source)(z_low, z_up, cosmo, const)
+        w_dirac = lensing_weights.Dirac(z_source)(z_low, z_up, cosmo)
 
         # compute continuous weight
         with mock.patch('numpy.genfromtxt') as genfromtxt:
-            genfromtxt.return_value = np.zeros((2, 2))  # something which has the correct shape
+            genfromtxt.return_value = np.array([[0.0, 0.0],
+                                                [0.2, 0.05],
+                                                [0.4, 0.01],
+                                                [0.6, 0.1]])  # something which has the correct shape
             cont_weights = lensing_weights.Continuous(None, z_lim_low=0, z_lim_up=2)
 
         cont_weights.nz_intpt = stats.norm(loc=z_source, scale=0.005).pdf  # set n(z) interpolator to approximate Dirac
         cont_weights.nz_norm = 1
 
-        w_cont = cont_weights(z_low, z_up, cosmo, const)
+        w_cont = cont_weights(z_low, z_up, cosmo)
 
         assert (w_dirac - w_cont) / w_cont < 0.01
 
@@ -92,12 +94,15 @@ def test_dirac_to_continuous(cosmo):
 
     # compute continuous lensing weight
     with mock.patch('numpy.genfromtxt') as genfromtxt:
-        genfromtxt.return_value = np.zeros((2, 2))  # something which has the correct shape
+        genfromtxt.return_value = np.array([[0.0, 0.0],
+                                            [0.2, 0.05],
+                                            [0.4, 0.01],
+                                            [0.6, 0.1]])  # something which has the correct shape
         cont_weights = lensing_weights.Continuous(None, z_lim_low=0, z_lim_up=2)
 
     cont_weights.nz_intpt = nz.pdf
     cont_weights.nz_norm = 1
-    w_cont = cont_weights(z_low, z_up, cosmo, const)
+    w_cont = cont_weights(z_low, z_up, cosmo)
 
     # sample source redshifts
     zs_source = nz.rvs(size=1000)
@@ -107,7 +112,7 @@ def test_dirac_to_continuous(cosmo):
     w_dirac = 0
 
     for i, z_source in enumerate(zs_source):
-        w_dirac += lensing_weights.Dirac(z_source)(z_low, z_up, cosmo, const)
+        w_dirac += lensing_weights.Dirac(z_source)(z_low, z_up, cosmo)
 
     w_dirac /= zs_source.size
 
@@ -122,6 +127,6 @@ def test_kappa_prefactor(cosmo):
     n_pix = 17395392
     n_particles = 1024 ** 3
     boxsize = 6
-    f = lensing_weights.kappa_prefactor(n_pix, n_particles, boxsize, cosmo, const)
+    f = lensing_weights.kappa_prefactor(n_pix, n_particles, boxsize, cosmo)
     assert '{:.18f}'.format(f) == str(0.001595227993431627)
 
