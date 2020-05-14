@@ -15,10 +15,10 @@ class Continuous:
     Computes the lensing weights for a continuous, user-defined n(z) distribution.
     """
 
-    def __init__(self, path_nz, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=None):
+    def __init__(self, n_of_z, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=None):
         """
         Constructor.
-        :param path_nz: either path to file containing n(z), assumed to be a text file readable with numpy.genfromtext
+        :param n_of_z: either path to file containing n(z), assumed to be a text file readable with numpy.genfromtext
                         with the first column containing z and the second column containing n(z), or a callable that
                         is directly a redshift distribution
         :param z_lim_low: lower integration limit to use for n(z) normalization, default: 0
@@ -27,24 +27,42 @@ class Continuous:
         :param IA: Intrinsic Alignment. If not None computes the lensing weights for IA component
                         (needs to be added to the weights without IA afterwards)
         """
-        nz = np.genfromtxt(path_nz)
 
-        if z_lim_up is None:
-            z_lim_up = nz[-1, 0]
+        # we handle the redshift dist depending on its type
+        if callable(n_of_z):
+            if z_lim_up is None:
+                raise ValueError("An upper bound of the redshift normalization has to be defined if n_of_z is not a "
+                                 "tabulated function.")
 
-        self.z_lim_up = z_lim_up
-        self.z_lim_low = z_lim_low
-        self.nz_intpt = interp1d(nz[:, 0] - shift_nz, nz[:, 1], bounds_error=False, fill_value=0.0)
-        self.IA = IA
-        self.lightcone_points = nz[np.logical_and(z_lim_low < nz[:,0], nz[:,0] < z_lim_up),0]
-
-        # check if there are any points remaining for the integration
-        if len(self.lightcone_points) == 0:
+            self.nz_intpt = n_of_z
+            # set the integration limit and integration points
             self.lightcone_points = None
             limit = 1000
         else:
-            limit = 10*len(self.lightcone_points)
+            # read from file
+            nz = np.genfromtxt(n_of_z)
 
+            # get the upper bound if necessary
+            if z_lim_up is None:
+                z_lim_up = nz[-1, 0]
+
+            # get the callable function
+            self.nz_intpt = interp1d(nz[:, 0] - shift_nz, nz[:, 1], bounds_error=False, fill_value=0.0)
+
+            # points for integration
+            self.lightcone_points = nz[np.logical_and(z_lim_low < nz[:, 0], nz[:, 0] < z_lim_up), 0]
+
+            # check if there are any points remaining for the integration
+            if len(self.lightcone_points) == 0:
+                self.lightcone_points = None
+                limit = 1000
+            else:
+                limit = 10 * len(self.lightcone_points)
+
+        self.z_lim_up = z_lim_up
+        self.z_lim_low = z_lim_low
+        self.IA = IA
+        # Normalization
         self.nz_norm = integrate.quad(lambda x: self.nz_intpt(x), z_lim_low, self.z_lim_up,
                                       points=self.lightcone_points, limit=limit)[0]
 
