@@ -37,7 +37,7 @@ class Continuous:
             self.nz_intpt = n_of_z
             # set the integration limit and integration points
             self.lightcone_points = None
-            limit = 1000
+            self.limit = 1000
         else:
             # read from file
             nz = np.genfromtxt(n_of_z)
@@ -55,16 +55,16 @@ class Continuous:
             # check if there are any points remaining for the integration
             if len(self.lightcone_points) == 0:
                 self.lightcone_points = None
-                limit = 1000
+                self.limit = 1000
             else:
-                limit = 10 * len(self.lightcone_points)
+                self.limit = 10 * len(self.lightcone_points)
 
         self.z_lim_up = z_lim_up
         self.z_lim_low = z_lim_low
         self.IA = IA
         # Normalization
         self.nz_norm = integrate.quad(lambda x: self.nz_intpt(x), z_lim_low, self.z_lim_up,
-                                      points=self.lightcone_points, limit=limit)[0]
+                                      points=self.lightcone_points, limit=self.limit)[0]
 
     def __call__(self, z_low, z_up, cosmo):
         """
@@ -79,12 +79,7 @@ class Continuous:
 
         if self.IA is None:
             # lensing weights without IA
-            numerator = integrate.dblquad(self._integrand,
-                                          z_low,
-                                          z_up,
-                                          lambda x: x,
-                                          lambda x: self.z_lim_up,
-                                          args=(cosmo,))[0]
+            numerator = integrate.quad(self._intefrand_1d, z_low, z_up, args=(cosmo,))[0]
         else:
             # lengsing weights for IA
             numerator = (2.0/(3.0*cosmo.Om0)) * \
@@ -93,13 +88,39 @@ class Continuous:
 
         return numerator / norm
 
-    def _integrand(self, y, x, cosmo):
+    def _integrand_2d(self, y, x, cosmo):
+        """
+        The 2d integrant of the continous lensing weights
+        :param y: redhsift that goes into the n(z)
+        :param x: redshift for the Dirac part
+        :param cosmo: Astropy.Cosmo instance, controls the cosmology used
+        :return: the 2d integrand function
+        """
         return self.nz_intpt(y) * \
                utils.dimensionless_comoving_distance(0, x, cosmo) * \
                utils.dimensionless_comoving_distance(x, y, cosmo) * \
                (1 + x) * \
                cosmo.inv_efunc(x) / \
                utils.dimensionless_comoving_distance(0, y, cosmo)
+
+    def _intefrand_1d(self, x, cosmo):
+        """
+        Function that integrates out y from the 2d integrand
+        :param x: at which x (redshfit to eval)
+        :param cosmo: Astropy.Cosmo instance, controls the cosmology used
+        :return: the 1d integrant at x
+        """
+        if self.lightcone_points is not None:
+            points = self.lightcone_points[np.logical_and(self.z_lim_low < self.lightcone_points,
+                                                          self.lightcone_points < self.z_lim_up)]
+            quad_y = lambda x: integrate.quad(lambda y: self._integrand_2d(y, x, cosmo), x, self.z_lim_up,
+                                              limit=self.limit, points=points)[0]
+        else:
+            quad_y = lambda x: integrate.quad(lambda y: self._integrand_2d(y, x, cosmo), x, self.z_lim_up,
+                                              limit=self.limit)[0]
+
+        return quad_y(x)
+
 
 
 class Dirac:
