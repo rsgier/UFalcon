@@ -160,10 +160,11 @@ def test_construct_shells():
         return pos_randomized[ind]
 
     with mock.patch('os.listdir') as listdir:
-        listdir.return_value = list(map(lambda x: str(x) + '_lightcone.', range(pos.shape[0])))  # as many "filenames" as we have sets of particle positions
+        # as many "filenames" as we have sets of particle positions
+        listdir.return_value = list(map(lambda x: str(x) + '_lightcone.', range(pos.shape[0])))
 
         with mock.patch('UFalcon.shells.read_file', side_effect=read_file_side_effect):
-            particle_shells = shells.construct_shells('', z_shells, None, cosmo, const, nside)
+            particle_shells = shells.construct_shells('', z_shells, None, cosmo, nside)
 
     # check results
     assert particle_shells.shape[0] == pos.shape[0]
