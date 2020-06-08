@@ -15,7 +15,7 @@ class Continuous:
     Computes the lensing weights for a continuous, user-defined n(z) distribution.
     """
 
-    def __init__(self, n_of_z, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=None):
+    def __init__(self, n_of_z, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=0.0):
         """
         Constructor.
         :param n_of_z: either path to file containing n(z), assumed to be a text file readable with numpy.genfromtext
@@ -76,14 +76,12 @@ class Continuous:
         """
         norm = utils.dimensionless_comoving_distance(z_low, z_up, cosmo) * self.nz_norm
         norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
-
-        if self.IA is None:
+        if abs(self.IA - 0.0) < 1e-10:
             # lensing weights without IA
             numerator = integrate.quad(self._intefrand_1d, z_low, z_up, args=(cosmo,))[0]
         else:
             # lengsing weights for IA
             numerator = (2.0/(3.0*cosmo.Om0)) * \
-                        (constants.c / cosmo.H0.value) * \
                         w_IA(self.IA, z_low, z_up, cosmo, self.nz_intpt, points=self.lightcone_points)
 
         return numerator / norm
@@ -202,7 +200,7 @@ def F_NIA_model(z, IA, cosmo):
     :return: NIA kernel at redshift z
     """
     OmegaM = cosmo.Om0
-    H0 = 100.0*cosmo.h
+    H0 = cosmo.H0.value
 
     # growth factor calculation
     growth = lambda a: 1.0 / (a * cosmo.H(1.0 / a - 1.0).value)**3.0
@@ -226,7 +224,7 @@ def F_NIA_model(z, IA, cosmo):
 
 def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points=None):
     """
-    Calculates the weight per slice for the NIA model given a 
+    Calculates the weight per slice for the NIA model given a
     distribution of source redshifts n(z).
     :param IA: Galaxy Intrinsic alignment amplitude
     :param z_low: Lower redshift limit of the shell
@@ -239,7 +237,7 @@ def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points=None):
     """
 
     def f(x):
-        return 100*cosmo.h / constants.c * (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
+        return cosmo.H0.value / constants.c * (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
 
     if points is not None:
         dbl = integrate.quad(f, z_low, z_up, points=points[np.logical_and(z_low < points, points < z_up)])[0]
