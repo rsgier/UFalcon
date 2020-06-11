@@ -237,7 +237,7 @@ def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points=None):
     """
 
     def f(x):
-        return cosmo.H0.value / constants.c * (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
+        return (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
 
     if points is not None:
         dbl = integrate.quad(f, z_low, z_up, points=points[np.logical_and(z_low < points, points < z_up)])[0]
