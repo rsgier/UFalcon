@@ -1,0 +1,23 @@
+## This is an example yaml-file with parameters used to run the example-scripts
+
+# Astropy cosmology configuration
+cosmology:
+  H0: 70
+  Om0: 0.3
+
+# N-Body simulation configuration
+n_particles: 1073741824
+boxsize: 1.6
+
+# Lightcone configuration (for L-PICOLA).
+# Note that PKDGRAV3 uses its own timestepping, which is given in the simulation log-file
+
+z_init: 0.0
+z_final: 1.75
+delta_z: 0.01
+
+z_low: {min: 0.0, max: 1.75, delta_z: 0.01}
+z_up: {min: 0.01, max: 1.76, delta_z: 0.01}
+
+
+
