@@ -10,5 +10,6 @@ sphinx
 coverage
 sphinx-pynpoint-theme
 tox
+h5py
 
 Astropy
