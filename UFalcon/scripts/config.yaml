@@ -9,12 +9,12 @@ cosmology:
 n_particles: 1073741824
 boxsize: 1.6
 
-# Lightcone configuration (for L-PICOLA).
+# Lightcone configuration
 # Note that PKDGRAV3 uses its own timestepping, which is given in the simulation log-file
 
-z_init: 0.0
-z_final: 1.75
-delta_z: 0.01
+z_init: 0.0       # starting redshift
+z_final: 1.75     # end redshift
+delta_z: 0.01     # size of redshift-shells
 
 z_low: {min: 0.0, max: 1.75, delta_z: 0.01}
 z_up: {min: 0.01, max: 1.76, delta_z: 0.01}

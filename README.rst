@@ -43,7 +43,6 @@ The folder /UFalcon/scripts contains some example-files, which you can use and a
 
 .. image:: ../UFalcon/scripts/sketch_package.png
     :width: 500px
-    :scale: 20%
 
 
 - construct_shells.py:
