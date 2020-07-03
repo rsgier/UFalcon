@@ -145,8 +145,7 @@ def add_shells_h5(paths_shells, lensing_weighters, nside, boxsize, zs_low, zs_up
                 shell *= UFalcon.lensing_weights.kappa_prefactor(n_pix=shell.size,
                                                                  n_particles=n_particles,
                                                                  boxsize=boxsize,
-                                                                 cosmo=cosmo,
-                                                                 const=const)
+                                                                 cosmo=cosmo)
 
                 # compute lensing weights and add to kappa maps
                 for i_w, lensing_weighter in enumerate(lensing_weighters):
@@ -205,8 +204,7 @@ def add_shells_pkdgrav(dirpath, lensing_weighters_cont, single_source_redshifts,
         shell *= UFalcon.lensing_weights.kappa_prefactor(n_pix=shell.size,
                                                          n_particles=n_particles,
                                                          boxsize=boxsize,
-                                                         cosmo=cosmo,
-                                                         const=const)
+                                                         cosmo=cosmo)
 
         # compute lensing weights and add to kappa maps
         for i_w, lensing_weighter in enumerate(lensing_weighters):

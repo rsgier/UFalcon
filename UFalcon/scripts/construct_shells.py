@@ -61,7 +61,6 @@ def main(path_config, dirpath_in, sim_type, boxsize, nside, path_out):
                                              z_shells=z,
                                              boxsize=boxsize,
                                              cosmo=cosmo,
-                                             const=const,
                                              nside=nside,
                                              file_format=sim_type)
 
