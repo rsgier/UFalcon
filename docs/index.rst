@@ -13,6 +13,8 @@ Contents:
 
    installation
    usage
+   construct_shells
+   construct_lensing_maps
    UFalcon
    contributing
    authors

@@ -50,7 +50,8 @@ def main(path_config, dirpath_in, sim_type, boxsize, nside, path_out):
         config = yaml.load(f)
 
     # get redshifts
-    z = get_redshifts(config['z_init'], config['z_final'], config['delta_z'])
+    z_low = config['z_low']
+    z = get_redshifts(z_low['min'], z_low['max'], z_low['delta_z'])
 
     # get cosmo instance
     cosmo_params = config.get('cosmology')

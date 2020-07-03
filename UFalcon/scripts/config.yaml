@@ -1,22 +1,20 @@
 ## This is an example yaml-file with parameters used to run the example-scripts
 
-# Astropy cosmology configuration
+# Astropy cosmology configuration (more cosmological parameters can be inserted here)
 cosmology:
   H0: 70
   Om0: 0.3
 
 # N-Body simulation configuration
-n_particles: 1073741824
-boxsize: 1.6
+n_particles: 1073741824     # total number of particles, i.e. Npart^3
+boxsize: 1.6                # Boxsize in Gpc (not Gpc/h !)
 
 # Lightcone configuration
 # Note that PKDGRAV3 uses its own timestepping, which is given in the simulation log-file
 
-z_init: 0.0       # starting redshift
-z_final: 1.75     # end redshift
-delta_z: 0.01     # size of redshift-shells
-
+# defines min and max redshift and size of redshift-shells (delta_z) for lower (z_low) and upper (z_up) bounds of the shells.
 z_low: {min: 0.0, max: 1.75, delta_z: 0.01}
+
 z_up: {min: 0.01, max: 1.76, delta_z: 0.01}
 
 
