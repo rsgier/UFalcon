@@ -42,7 +42,7 @@ Getting Started
 The folder /UFalcon/scripts contains some example-files, which you can use and adapt for your analysis. A sketch of the UFalcon pipeline using the example-scripts is given below:
 
 .. image:: ../UFalcon/scripts/sketch_package.png
-    :width: 500px
+    :width: 100px
     :scale: 20%
 
 - construct_shells.py:
