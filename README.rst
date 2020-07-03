@@ -2,6 +2,12 @@
 UFalcon (Ultra Fast Lightcone) - Version 0.2.0
 =============================
 
+.. image:: https://cosmo-gitlab.phys.ethz.ch/cosmo_public/UFalcon/badges/master/coverage.svg
+  		:target: https://cosmo-gitlab.phys.ethz.ch/cosmo_public/UFalcon
+
+.. image:: https://cosmo-gitlab.phys.ethz.ch/cosmo_public/UFalcon/badges/master/pipeline.svg
+        :target: https://cosmo-gitlab.phys.ethz.ch/cosmo_public/UFalcon
+
 .. image:: http://img.shields.io/badge/arXiv-1801.05745-orange.svg?style=flat
         :target: https://arxiv.org/abs/1801.05745
 
