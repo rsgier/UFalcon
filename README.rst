@@ -34,12 +34,14 @@ Features
 
 * Fast computation of fullsky Healpix maps (`Gorski et al. 2005 <https://iopscience.iop.org/article/10.1086/427976>`_) containing particle counts (shells).
 * Fast construction of weak lensing maps (convergence, shear) for user-specific redshift distributions and single-source redshifts.
-* Computation of galaxy intrinsic alignment (IA) signal (additive to the cosmological signal) based on the nonlinear intrinsic alignment model (NLA) (`Bridle et al. 2007 <https://arxiv.org/abs/0705.0166>`_ , `Hirata et al. 2004 <https://journals.aps.org/prd/abstract/10.1103/PhysRevD.70.063526>`_ and `Joachimi et al. 2011 <https://www.aanda.org/articles/aa/abs/2011/03/aa15621-10/aa15621-10.html>`_) and applied in `Zürcher et al. 2020 <https://arxiv.org/abs/2006.12506>`_).
+* Computation of galaxy intrinsic alignment (IA) signal (additive to the cosmological signal) based on the nonlinear intrinsic alignment model (NLA) (`Bridle et al. 2007 <https://arxiv.org/abs/0705.0166>`_ , `Hirata et al. 2004 <https://journals.aps.org/prd/abstract/10.1103/PhysRevD.70.063526>`_ and `Joachimi et al. 2011 <https://www.aanda.org/articles/aa/abs/2011/03/aa15621-10/aa15621-10.html>`_) and applied in `Zürcher et al. 2020 <https://arxiv.org/abs/2006.12506>`_.
 
 Getting Started
 --------
 
-The folder /UFalcon/scripts contains some example-files, which you can use and adapt for your analysis. These scripts are:
+The folder /UFalcon/scripts contains some example-files, which you can use and adapt for your analysis. A sketch of the UFalcon pipeline using the example-scripts is given below:
+
+.. image:: ../UFalcon/scripts/sketch_package.png
 
 - construct_shells.py:
 
@@ -52,10 +54,6 @@ The folder /UFalcon/scripts contains some example-files, which you can use and a
 - config.yaml:
 
     Example yaml-file with parameters used to run the example-scripts.
-
-A sketch of the UFalcon pipeline using the example-scripts is given below:
-
-.. image:: ../scripts/sketch_package.pdf
 
 Credits
 --------
