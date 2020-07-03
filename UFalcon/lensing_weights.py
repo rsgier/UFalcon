@@ -78,7 +78,7 @@ class Continuous:
         norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
         if abs(self.IA - 0.0) < 1e-10:
             # lensing weights without IA
-            numerator = integrate.quad(self._intefrand_1d, z_low, z_up, args=(cosmo,))[0]
+            numerator = integrate.quad(self._integrand_1d, z_low, z_up, args=(cosmo,))[0]
         else:
             # lengsing weights for IA
             numerator = (2.0/(3.0*cosmo.Om0)) * \
@@ -101,7 +101,7 @@ class Continuous:
                cosmo.inv_efunc(x) / \
                utils.dimensionless_comoving_distance(0, y, cosmo)
 
-    def _intefrand_1d(self, x, cosmo):
+    def _integrand_1d(self, x, cosmo):
         """
         Function that integrates out y from the 2d integrand
         :param x: at which x (redshfit to eval)

@@ -296,7 +296,7 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Construct shells containing particle counts from N-Body simulations',
+    parser = argparse.ArgumentParser(description='Construct lensing maps',
                                      add_help=True)
     parser.add_argument('--path_config', type=str, required=True, help='configuration yaml file')
     parser.add_argument('--paths_shells', type=str, nargs='+', required=True, help='paths of shells')
