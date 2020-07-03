@@ -80,7 +80,7 @@ class Continuous:
             # lensing weights without IA
             numerator = integrate.quad(self._integrand_1d, z_low, z_up, args=(cosmo,))[0]
         else:
-            # lengsing weights for IA
+            # lensing weights for IA
             numerator = (2.0/(3.0*cosmo.Om0)) * \
                         w_IA(self.IA, z_low, z_up, cosmo, self.nz_intpt, points=self.lightcone_points)
 
@@ -231,7 +231,7 @@ def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points=None):
     :param z_up: Upper redshift limit of the shell
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
     :param nz_intpt: nz function
-    :param points: Points in redshift where integrad is evaluated (used for better numerical integration), can be None
+    :param points: Points in redshift where integrand is evaluated (used for better numerical integration), can be None
     :return: Shell weight for NIA model
 
     """

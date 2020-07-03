@@ -261,7 +261,7 @@ def main(path_config, paths_shells, nside, paths_nz, single_source_redshifts, pa
 
     lensing_weighters = [UFalcon.lensing_weights.Continuous(path_nz,
                                                             z_lim_low=z_lim_low,
-                                                            z_lim_up=z_lim_up) for path_nz in paths_nz]
+                                                            z_lim_up=z_lim_up, IA=0.0) for path_nz in paths_nz]
 
     # check if shells from h5 file(s) or shells from PKDGRAV
     if len(paths_shells) == 1 and os.path.isdir(paths_shells[0]):

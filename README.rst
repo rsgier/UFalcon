@@ -26,25 +26,36 @@ Why use UFalcon?
 --------
 
 In order to accurately infer cosmological constraints from current and future weak lensing data, a large ensemble of survey simulations are required to model cosmological observables
-and a well-converged covariance matrix. UFalcon applied to PKDGRAV3-output combines accuracy and minimal computational runtime: The simulation of the density field guarantees to satisfy a certain force accuracy and is therefore not an approximate N-Body code. Furthermore, the PKDGRAV3 code is highly efficient and can be run with graphics processing units (GPU) support. The subsequent post-processing with UFalcon can be parallelized on a computer cluster and has a runtime of less than 30 min walltime per convergence mass map. Furthermore, it offers a high flexibility for the lightcone construction, such as user-specific redshift ranges and redshift distributions and single-source redshifts.
+and a well-converged covariance matrix. UFalcon applied to PKDGRAV3-output combines accuracy and minimal computational runtime: The simulation of the density field guarantees to satisfy a certain force accuracy and is therefore not an approximate N-Body code. Furthermore, the PKDGRAV3 code is highly efficient and can be run with graphics processing units (GPU) support. The subsequent post-processing with UFalcon can be parallelized on a computer cluster and has a runtime of less than 30 min walltime per convergence mass map. The package offers a high flexibility for the lightcone construction, such as user-specific redshift ranges, redshift distributions and single-source redshifts. Furthermore, UFalcon offers the possibility to compute the galaxy intrinsic alignment signal, which can be treated as an additive component to the cosmological signal.
 
 
 Features
 --------
 
-* Fast computation of fullsky Healpix maps (`Gorski et al. 2005 <https://iopscience.iop.org/article/10.1086/427976>`_) containing particle counts (shells)
-* Fast construction of weak lensing maps (convergence, shear) for user-specific redshift distributions and single-source redshifts
+* Fast computation of fullsky Healpix maps (`Gorski et al. 2005 <https://iopscience.iop.org/article/10.1086/427976>`_) containing particle counts (shells).
+* Fast construction of weak lensing maps (convergence, shear) for user-specific redshift distributions and single-source redshifts.
+* Computation of galaxy intrinsic alignment (IA) signal (additive to the cosmological signal) based on the nonlinear intrinsic alignment model (NLA) (`Bridle et al. 2007 <https://arxiv.org/abs/0705.0166>`_ , `Hirata et al. 2004 <https://journals.aps.org/prd/abstract/10.1103/PhysRevD.70.063526>`_ and `Joachimi et al. 2011 <https://www.aanda.org/articles/aa/abs/2011/03/aa15621-10/aa15621-10.html>`_) and applied in `Zürcher et al. 2020 <https://arxiv.org/abs/2006.12506>`_).
 
 Getting Started
 --------
 
-The files in the folder scripts contain some example-function you can use and adapt for your analysis. These are:
+The folder /UFalcon/scripts contains some example-files, which you can use and adapt for your analysis. These scripts are:
 
 - construct_shells.py:
 
-    Computes and stores healpy maps containing the particle counts (shells) from N-Body simulation output.
+    Computes and stores maps in hdf5-format containing the particle counts (shells) from N-Body simulation output. The user can choose between lightcone-output from PKDGRAV3 oder L-PICOLA.
 
-Some example-functions showing how to implement UFalcon for your analysis can be found in the files folder scripts.
+- construct_lensing_maps.py:
+
+    Computes convergence maps from precomputed shells in hdf5-format containing particles counts. The lensing weights require a continuous, user-specific redshift distribution or a single-source redshifts. The output consists of the convergence and the corresponding shear maps. The galaxy intrinsic alignment signal can be obtained by setting IA=1 as a parameter for the continuous lensing weights.
+
+- config.yaml:
+
+    Example yaml-file with parameters used to run the example-scripts.
+
+A sketch of the UFalcon pipeline using the example-scripts is given below:
+
+.. image:: ../scripts/sketch_package.pdf
 
 Credits
 --------
