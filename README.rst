@@ -17,6 +17,12 @@ Package for constructing full-sky weak lensing maps from lightcones based on N-B
 
 Introduced in `Sgier et al. 2019 <https://iopscience.iop.org/article/10.1088/1475-7516/2019/01/044>`_ and extended in Sgier et al. 2020 (in prep.).
 
+Why use UFalcon?
+--------
+
+In order to accurately infer cosmological constraints from current and future weak lensing data, a large ensemble of survey simulations are required to model cosmological observables
+and a well-converged covariance matrix. UFalcon applied to PKDGRAV3-output combines accuracy and minimal computational runtime: The simulation of the density field guarantees to satisfy a certain force accuracy and is therefore not an approximate N-Body code. Furthermore, the PKDGRAV3 code is highly efficient and can be run with graphics processing units (GPU) support. The subsequent post-processing with UFalcon can be parallelized on a computer cluster and has a runtime of less than 30 min walltime per convergence mass map. The package offers a high flexibility for the lightcone construction, such as user-specific redshift ranges, redshift distributions and single-source redshifts. Furthermore, UFalcon offers the possibility to compute the galaxy intrinsic alignment signal, which can be treated as an additive component to the cosmological signal.
+
 N-Body Simulations
 --------
 
@@ -26,13 +32,6 @@ Currently supported N-Body simulation codes are:
 * L-PICOLA (`Howlett et al. 2015 <https://arxiv.org/abs/1506.03737>`_) available `here <https://cullanhowlett.github.io/l-picola/>`_.
 
 Note that UFalcon currently only supports post-processing of simulation output generated in lightcone mode.
-
-Why use UFalcon?
---------
-
-In order to accurately infer cosmological constraints from current and future weak lensing data, a large ensemble of survey simulations are required to model cosmological observables
-and a well-converged covariance matrix. UFalcon applied to PKDGRAV3-output combines accuracy and minimal computational runtime: The simulation of the density field guarantees to satisfy a certain force accuracy and is therefore not an approximate N-Body code. Furthermore, the PKDGRAV3 code is highly efficient and can be run with graphics processing units (GPU) support. The subsequent post-processing with UFalcon can be parallelized on a computer cluster and has a runtime of less than 30 min walltime per convergence mass map. The package offers a high flexibility for the lightcone construction, such as user-specific redshift ranges, redshift distributions and single-source redshifts. Furthermore, UFalcon offers the possibility to compute the galaxy intrinsic alignment signal, which can be treated as an additive component to the cosmological signal.
-
 
 Features
 --------

@@ -14,7 +14,6 @@ boxsize: 1.6                # Boxsize in Gpc (not Gpc/h !)
 
 # defines min and max redshift and size of redshift-shells (delta_z) for lower (z_low) and upper (z_up) bounds of the shells.
 z_low: {min: 0.0, max: 1.75, delta_z: 0.01}
-
 z_up: {min: 0.01, max: 1.76, delta_z: 0.01}
 
 
