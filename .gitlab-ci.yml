@@ -43,7 +43,7 @@ publish_docs:
     tags:
         - python
     script:
-        - publish_docs docs/_build/ UFalcon
+        - publish_docs docs/_build/html UFalcon
         - create_index_html
     when: manual
     stage: publish_docs
