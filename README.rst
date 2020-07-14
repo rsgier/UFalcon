@@ -13,7 +13,7 @@ UFalcon (Ultra Fast Lightcone) - Version 0.2.0
 
 Package for constructing full-sky weak lensing maps from lightcones based on N-Body simulation output within a minimal runtime. Written in Python 3.
 
-Introduced in `Sgier et al. 2019 <https://iopscience.iop.org/article/10.1088/1475-7516/2019/01/044>`_ and extended in Sgier et al. 2020 (in prep.).
+Introduced in `Sgier et al. 2019 <https://iopscience.iop.org/article/10.1088/1475-7516/2019/01/044>`_ and extended in `Sgier et al. 2020 <https://arxiv.org/abs/2007.05735>`_.
 
 Why use UFalcon?
 ================
@@ -46,6 +46,7 @@ The following sections provide an overview of the UFalcon pipeline and some exam
 Credits
 =======
 
+- If you use UFalcon for your research please cite `Sgier et al. 2019 <https://iopscience.iop.org/article/10.1088/1475-7516/2019/01/044>`_ and `Sgier et al. 2020 <https://arxiv.org/abs/2007.05735>`_.
 - Copyright (C) 2020 ETH Zurich, Institute for Particle Physics and Astrophysics, `Cosmology Group <https://cosmology.ethz.ch/>`_
 - Authors: Raphael Sgier and Jörg Herbel
 - Contact: Raphael Sgier raphael.sgier@phys.ethz.ch.
