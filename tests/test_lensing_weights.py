@@ -130,3 +130,33 @@ def test_kappa_prefactor(cosmo):
     f = lensing_weights.kappa_prefactor(n_pix, n_particles, boxsize, cosmo)
     assert '{:.18f}'.format(f) == str(0.001595227993431627)
 
+
+def test_NLA(cosmo):
+    # define n(z)
+    mu = 0.6
+    std = 0.1
+    nz = stats.norm(loc=mu, scale=std)
+
+    # define redshift interval to test
+    z_low = 0.3
+    z_up = 0.31
+
+    # compute continuous lensing weight
+    cont_weights = lensing_weights.Continuous(nz.pdf, z_lim_low=0, z_lim_up=2)
+    w_cont_no_IA = cont_weights(z_low, z_up, cosmo)
+
+    # check that with zero IA same result is returned
+    cont_weights = lensing_weights.Continuous(nz.pdf, z_lim_low=0, z_lim_up=2,
+                                              IA=0, eta=10, z_0=5)
+    w_cont = cont_weights(z_low, z_up, cosmo)
+    assert np.isclose(w_cont_no_IA, w_cont)
+
+    # check that simple IA without redshift dependence works
+    cont_weights = lensing_weights.Continuous(nz.pdf, z_lim_low=0, z_lim_up=2,
+                                              IA=1, eta=0.0, z_0=0.0)
+    w_cont_IA = cont_weights(z_low, z_up, cosmo)
+
+    # check that IA with redshift dependence works
+    cont_weights = lensing_weights.Continuous(nz.pdf, z_lim_low=0, z_lim_up=2,
+                                              IA=1, eta=1.0, z_0=0.5)
+    w_cont_IA = cont_weights(z_low, z_up, cosmo)
