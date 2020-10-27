@@ -15,7 +15,7 @@ class Continuous:
     Computes the lensing weights for a continuous, user-defined n(z) distribution.
     """
 
-    def __init__(self, n_of_z, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=0.0):
+    def __init__(self, n_of_z, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=0.0, eta=0.0, z_0=0.5):
         """
         Constructor.
         :param n_of_z: either path to file containing n(z), assumed to be a text file readable with numpy.genfromtext
@@ -24,8 +24,9 @@ class Continuous:
         :param z_lim_low: lower integration limit to use for n(z) normalization, default: 0
         :param z_lim_up: upper integration limit to use for n(z) normalization, default: last z-coordinate in n(z) file
         :param shift_nz: Can shift the n(z) function by some redshift (intended for easier implementation of photo z bias)
-        :param IA: Intrinsic Alignment. If not None computes the lensing weights for IA component
-                        (needs to be added to the weights without IA afterwards)
+        :param IA: Intrinsic alignment amplitude for the NLA model.
+        :param eta: Parameter for the redshift dependence of the NLA model.
+        :param z_0: Pivot parameter for the redshift dependence of the NLA model
         """
 
         # we handle the redshift dist depending on its type
@@ -62,6 +63,8 @@ class Continuous:
         self.z_lim_up = z_lim_up
         self.z_lim_low = z_lim_low
         self.IA = IA
+        self.eta = eta
+        self.z_0 = z_0
         # Normalization
         self.nz_norm = integrate.quad(lambda x: self.nz_intpt(x), z_lim_low, self.z_lim_up,
                                       points=self.lightcone_points, limit=self.limit)[0]
@@ -82,7 +85,7 @@ class Continuous:
         else:
             # lensing weights for IA
             numerator = (2.0/(3.0*cosmo.Om0)) * \
-                        w_IA(self.IA, z_low, z_up, cosmo, self.nz_intpt, points=self.lightcone_points)
+                        w_IA(self.IA, self.eta, z_low, z_up, cosmo, self.nz_intpt, z_0=self.z_0, points=self.lightcone_points)
 
         return numerator / norm
 
@@ -191,13 +194,15 @@ def kappa_prefactor(n_pix, n_particles, boxsize, cosmo):
     return convergence_factor
 
 
-def F_NIA_model(z, IA, cosmo):
+def F_NLA_model(z, IA, eta, z_0, cosmo):
     """
-    Calculates the NIA kernel used to calculate the IA shell weight
+    Calculates the NLA kernel used to calculate the IA shell weight
     :param z: Redshift where to evaluate
     :param IA: Galaxy intrinsic alignments amplitude
+    :param eta: Galaxy Intrinsic alignment redshift dependence
+    :param z_0: Pivot parameter for the redshift dependence of the NLA model
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
-    :return: NIA kernel at redshift z
+    :return: NLA kernel at redshift z
     """
     OmegaM = cosmo.Om0
     H0 = cosmo.H0.value
@@ -219,25 +224,30 @@ def F_NIA_model(z, IA, cosmo):
     # Proportionality constant Msun^-1 Mpc^3
     C1 = 5e-14 / (H0/100.0) ** 2
 
-    return -IA * rho_c * C1 * OmegaM / g
+    # redshift dependece term
+    red_dep = ((1 + z) / (1 + z_0))**eta
+
+    return -IA * rho_c * C1 * OmegaM / g * red_dep
 
 
-def w_IA(IA, z_low, z_up, cosmo, nz_intpt, points=None):
+def w_IA(IA, eta, z_low, z_up, cosmo, nz_intpt, z_0=0.5, points=None):
     """
-    Calculates the weight per slice for the NIA model given a
+    Calculates the weight per slice for the NLA model given a
     distribution of source redshifts n(z).
     :param IA: Galaxy Intrinsic alignment amplitude
+    :param eta: Galaxy Intrinsic alignment redshift dependence
     :param z_low: Lower redshift limit of the shell
     :param z_up: Upper redshift limit of the shell
     :param cosmo: Astropy.Cosmo instance, controls the cosmology used
     :param nz_intpt: nz function
+    :param z_0: Pivot parameter for the redshift dependence of the NLA model
     :param points: Points in redshift where integrand is evaluated (used for better numerical integration), can be None
-    :return: Shell weight for NIA model
+    :return: Shell weight for NLA model
 
     """
 
     def f(x):
-        return (F_NIA_model(x, IA, cosmo) * nz_intpt(x))
+        return (F_NLA_model(x, IA, eta, z_0, cosmo) * nz_intpt(x))
 
     if points is not None:
         dbl = integrate.quad(f, z_low, z_up, points=points[np.logical_and(z_low < points, points < z_up)])[0]
