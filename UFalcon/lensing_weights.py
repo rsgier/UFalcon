@@ -84,7 +84,7 @@ class Continuous:
         """
         norm = utils.dimensionless_comoving_distance(z_low, z_up, cosmo) * self.nz_norm
         norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
-        if abs(self.IA - 0.0) < 1e-10:
+        if self.IA is None or abs(self.IA - 0.0) < 1e-10:
             # lensing weights without IA
             numerator = integrate.quad(self._integrand_1d, z_low, z_up, args=(cosmo,))[0]
         else:
