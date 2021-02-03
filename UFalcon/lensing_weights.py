@@ -15,12 +15,16 @@ class Continuous:
     Computes the lensing weights for a continuous, user-defined n(z) distribution.
     """
 
-    def __init__(self, n_of_z, z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=0.0, eta=0.0, z_0=0.5):
+    def __init__(self, n_of_z, interpolation_kind='linear', z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=0.0, eta=0.0,
+                 z_0=0.5):
         """
         Constructor.
         :param n_of_z: either path to file containing n(z), assumed to be a text file readable with numpy.genfromtext
-                        with the first column containing z and the second column containing n(z), or a callable that
-                        is directly a redshift distribution
+                       with the first column containing z and the second column containing n(z), or a callable that
+                       is directly a redshift distribution
+        :param interpolation_kind: This argument specifies type of interpolation used, if the redshift distribution is
+                                   read from a file. It is directly forwarded to scipy.interpolate.interp1d and
+                                   defaults to 'linear'
         :param z_lim_low: lower integration limit to use for n(z) normalization, default: 0
         :param z_lim_up: upper integration limit to use for n(z) normalization, default: last z-coordinate in n(z) file
         :param shift_nz: Can shift the n(z) function by some redshift (intended for easier implementation of photo z bias)
@@ -48,7 +52,8 @@ class Continuous:
                 z_lim_up = nz[-1, 0]
 
             # get the callable function
-            self.nz_intpt = interp1d(nz[:, 0] - shift_nz, nz[:, 1], bounds_error=False, fill_value=0.0)
+            self.nz_intpt = interp1d(nz[:, 0] - shift_nz, nz[:, 1], bounds_error=False, fill_value=0.0,
+                                     kind=interpolation_kind)
 
             # points for integration
             self.lightcone_points = nz[np.logical_and(z_lim_low < nz[:, 0], nz[:, 0] < z_lim_up), 0]
