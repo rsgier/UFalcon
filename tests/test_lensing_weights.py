@@ -69,6 +69,7 @@ def test_continuous_to_dirac(cosmo):
                                                 [z_source + 0.001, 0.0]])
             # get the weights
             cont_weights = lensing_weights.Continuous(None, z_lim_low=0, z_lim_up=2)
+            cont_weights_fast = lensing_weights.Continuous(None, z_lim_low=0, z_lim_up=2, fast_mode=True)
 
         w_cont = cont_weights(z_low, z_up, cosmo)
         print(w_cont)
@@ -80,8 +81,16 @@ def test_continuous_to_dirac(cosmo):
         # get the weights
         cont_weights = lensing_weights.Continuous(n_of_z, z_lim_low=0, z_lim_up=2)
         w_cont = cont_weights(z_low, z_up, cosmo)
-
         assert (w_dirac - w_cont) / w_cont < 0.01
+
+        n_of_z = stats.norm(loc=z_source, scale=0.5).pdf  # set n(z) interpolator to approximate Dirac
+        # get the weights
+        cont_weights = lensing_weights.Continuous(n_of_z, z_lim_low=0, z_lim_up=2)
+        cont_weights_fast = lensing_weights.Continuous(n_of_z, z_lim_low=0, z_lim_up=2, fast_mode=True)
+        w_cont = cont_weights(z_low, z_up, cosmo)
+        w_cont_fast = cont_weights_fast(z_low, z_up, cosmo)
+
+        assert (w_cont_fast - w_cont) / w_cont < 0.001
 
 
 def test_dirac_to_continuous(cosmo):

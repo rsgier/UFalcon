@@ -16,7 +16,7 @@ class Continuous:
     """
 
     def __init__(self, n_of_z, interpolation_kind='linear', z_lim_low=0, z_lim_up=None, shift_nz=0.0, IA=0.0, eta=0.0,
-                 z_0=0.5):
+                 z_0=0.5, fast_mode=False):
         """
         Constructor.
         :param n_of_z: either path to file containing n(z), assumed to be a text file readable with numpy.genfromtext
@@ -31,6 +31,10 @@ class Continuous:
         :param IA: Intrinsic alignment amplitude for the NLA model.
         :param eta: Parameter for the redshift dependence of the NLA model.
         :param z_0: Pivot parameter for the redshift dependence of the NLA model
+        :param fast_mode: Instead of using quad from scipy, use a simple simpson rule, note that this will drastically
+                          decrease the runtime of the weight calculation if you n(z) is no continuous, while reducing
+                          the accuracy and increasing the memory usage. This should not be used for highly oscillation
+                          redshift distributions!
         """
 
         # we handle the redshift dist depending on its type
@@ -70,6 +74,7 @@ class Continuous:
         self.IA = IA
         self.eta = eta
         self.z_0 = z_0
+        self.fast_mode = fast_mode
         # Normalization
         self.nz_norm = integrate.quad(lambda x: self.nz_intpt(x), z_lim_low, self.z_lim_up,
                                       points=self.lightcone_points, limit=self.limit)[0]
@@ -85,12 +90,18 @@ class Continuous:
         norm = utils.dimensionless_comoving_distance(z_low, z_up, cosmo) * self.nz_norm
         norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
         if self.IA is None or abs(self.IA - 0.0) < 1e-10:
-            # lensing weights without IA
-            numerator = integrate.quad(self._integrand_1d, z_low, z_up, args=(cosmo,))[0]
+            if self.fast_mode:
+                z_vals, dz = np.linspace(z_low, z_up, 16, retstep=True)
+                quad_y_vals = self._integrand_1d(z_vals, cosmo)
+                numerator = integrate.simps(quad_y_vals, dx=dz, axis=0)
+            else:
+                # lensing weights without IA
+                numerator = integrate.quad(self._integrand_1d, z_low, z_up, args=(cosmo,))[0]
         else:
             # lensing weights for IA
             numerator = (2.0/(3.0*cosmo.Om0)) * \
-                        w_IA(self.IA, self.eta, z_low, z_up, cosmo, self.nz_intpt, z_0=self.z_0, points=self.lightcone_points)
+                        w_IA(self.IA, self.eta, z_low, z_up, cosmo, self.nz_intpt, z_0=self.z_0,
+                             points=self.lightcone_points)
 
         return numerator / norm
 
@@ -103,11 +114,11 @@ class Continuous:
         :return: the 2d integrand function
         """
         return self.nz_intpt(y) * \
-               utils.dimensionless_comoving_distance(0, x, cosmo) * \
-               utils.dimensionless_comoving_distance(x, y, cosmo) * \
+               utils.dimensionless_comoving_distance(0, x, cosmo, fast_mode=self.fast_mode) * \
+               utils.dimensionless_comoving_distance(x, y, cosmo, fast_mode=self.fast_mode) * \
                (1 + x) * \
                cosmo.inv_efunc(x) / \
-               utils.dimensionless_comoving_distance(0, y, cosmo)
+               utils.dimensionless_comoving_distance(0, y, cosmo, fast_mode=self.fast_mode)
 
     def _integrand_1d(self, x, cosmo):
         """
@@ -116,14 +127,21 @@ class Continuous:
         :param cosmo: Astropy.Cosmo instance, controls the cosmology used
         :return: the 1d integrant at x
         """
-        if self.lightcone_points is not None:
-            points = self.lightcone_points[np.logical_and(self.z_lim_low < self.lightcone_points,
-                                                          self.lightcone_points < self.z_lim_up)]
-            quad_y = lambda x: integrate.quad(lambda y: self._integrand_2d(y, x, cosmo), x, self.z_lim_up,
-                                              limit=self.limit, points=points)[0]
+        if self.fast_mode:
+            def quad_y(x):
+                x = np.atleast_1d(x)
+                y_vals, dy = np.linspace(x, self.z_lim_up, 256, retstep=True)
+                f_vals = np.nan_to_num(self._integrand_2d(y_vals, x, cosmo))
+                return integrate.simps(f_vals, dx=dy, axis=0)
         else:
-            quad_y = lambda x: integrate.quad(lambda y: self._integrand_2d(y, x, cosmo), x, self.z_lim_up,
-                                              limit=self.limit)[0]
+            if self.lightcone_points is not None:
+                points = self.lightcone_points[np.logical_and(self.z_lim_low < self.lightcone_points,
+                                                              self.lightcone_points < self.z_lim_up)]
+                quad_y = lambda x: integrate.quad(lambda y: self._integrand_2d(y, x, cosmo), x, self.z_lim_up,
+                                                  limit=self.limit, points=points)[0]
+            else:
+                quad_y = lambda x: integrate.quad(lambda y: self._integrand_2d(y, x, cosmo), x, self.z_lim_up,
+                                                  limit=self.limit)[0]
 
         return quad_y(x)
 
@@ -215,6 +233,7 @@ def F_NLA_model(z, IA, eta, z_0, cosmo):
     # growth factor calculation
     growth = lambda a: 1.0 / (a * cosmo.H(1.0 / a - 1.0).value)**3.0
     a = 1.0 / (1.0 + z)
+
     g = 5.0 * OmegaM / 2.0 * cosmo.efunc(z) * integrate.quad(growth, 0, a)[0]
 
     # Calculate the growth factor today
