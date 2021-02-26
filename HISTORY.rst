@@ -20,3 +20,9 @@ History
 * support for continuous (not tabulated) redshift distribution
 * Run external test with established pipeline
 * Extended tests for lensing weights
+
+0.3.0 (2021-02-26)
+++++++++++++++++++
+
+* Introduced a "fast_mode" that accelerates the computation for discontinuous n(z) that are well behaved
+* Using pixel weights for more accurate kappa to gamma transformation
