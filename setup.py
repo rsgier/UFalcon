@@ -31,7 +31,7 @@ PACKAGE_PATH = os.path.abspath(os.path.join(__file__, os.pardir))
 
 setup(
     name='UFalcon',
-    version='0.2.0',
+    version='0.3.0',
     description='Ultra Fast Lightcone',
     long_description=readme + '\n\n' + doclink + '\n\n' + history,
     author='Raphael Sgier',
