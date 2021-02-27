@@ -91,7 +91,7 @@ class Continuous:
         norm *= (utils.dimensionless_comoving_distance(0., (z_low + z_up)/2., cosmo) ** 2.)
         if self.IA is None or abs(self.IA - 0.0) < 1e-10:
             if self.fast_mode:
-                z_vals, dz = np.linspace(z_low, z_up, 16, retstep=True)
+                z_vals, dz = np.linspace(z_low, z_up, 13, retstep=True)
                 quad_y_vals = self._integrand_1d(z_vals, cosmo)
                 numerator = integrate.simps(quad_y_vals, dx=dz, axis=0)
             else:
@@ -130,9 +130,9 @@ class Continuous:
         if self.fast_mode:
             def quad_y(x):
                 x = np.atleast_1d(x)
-                y_vals, dy = np.linspace(x, self.z_lim_up, 256, retstep=True)
+                y_vals = np.geomspace(np.maximum(x, 1e-4), self.z_lim_up, 512+1)
                 f_vals = np.nan_to_num(self._integrand_2d(y_vals, x, cosmo))
-                return integrate.simps(f_vals, dx=dy, axis=0)
+                return integrate.simps(f_vals, x=y_vals, axis=0)
         else:
             if self.lightcone_points is not None:
                 points = self.lightcone_points[np.logical_and(self.z_lim_low < self.lightcone_points,
