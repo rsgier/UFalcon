@@ -130,7 +130,8 @@ class Continuous:
         if self.fast_mode:
             def quad_y(x):
                 x = np.atleast_1d(x)
-                y_vals = np.geomspace(np.maximum(x, 1e-4), self.z_lim_up, 512+1)
+                # we need to protect against under and overflow
+                y_vals = np.geomspace(np.maximum(x, 1e-4), self.z_lim_up + 1e-12, 512+1)
                 f_vals = np.nan_to_num(self._integrand_2d(y_vals, x, cosmo))
                 return integrate.simps(f_vals, x=y_vals, axis=0)
         else:
