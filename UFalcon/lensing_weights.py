@@ -32,9 +32,12 @@ class Continuous:
         :param eta: Parameter for the redshift dependence of the NLA model.
         :param z_0: Pivot parameter for the redshift dependence of the NLA model
         :param fast_mode: Instead of using quad from scipy, use a simple simpson rule, note that this will drastically
-                          decrease the runtime of the weight calculation if you n(z) is no continuous, while reducing
-                          the accuracy and increasing the memory usage. This should not be used for highly oscillation
-                          redshift distributions!
+                          decrease the runtime of the weight calculation if you n(z) is not continuous, while reducing
+                          the accuracy and increasing the memory usage. This mode is intended for large scale runs
+                          that use the same or very similar redshift distributions. You should always benchmark the
+                          fast mode against the normal mode before you start such a run to see if the accuracy is
+                          sufficient. The possibility to tweak the accuracy parameter of the fast mode will come in
+                          future versions.
         """
 
         # we handle the redshift dist depending on its type
