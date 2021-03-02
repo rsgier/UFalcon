@@ -8,8 +8,6 @@ from scipy.interpolate import interp1d
 from UFalcon import utils, constants
 
 
-
-
 class Continuous:
     """
     Computes the lensing weights for a continuous, user-defined n(z) distribution.
@@ -20,8 +18,8 @@ class Continuous:
         """
         Constructor.
         :param n_of_z: either path to file containing n(z), assumed to be a text file readable with numpy.genfromtext
-                       with the first column containing z and the second column containing n(z), or a callable that
-                       is directly a redshift distribution
+                       with the first column containing z and the second column containing n(z), a 2D array of shape
+                       (N, 2) or a callable that is directly a redshift distribution
         :param interpolation_kind: This argument specifies type of interpolation used, if the redshift distribution is
                                    read from a file. It is directly forwarded to scipy.interpolate.interp1d and
                                    defaults to 'linear'
@@ -52,7 +50,12 @@ class Continuous:
             self.limit = 1000
         else:
             # read from file
-            nz = np.genfromtxt(n_of_z)
+            if isinstance(n_of_z, str):
+                nz = np.genfromtxt(n_of_z)
+            elif isinstance(n_of_z, np.ndarray):
+                nz = n_of_z.copy()
+            else:
+                raise ValueError("n_of_z type not understood...")
 
             # get the upper bound if necessary
             if z_lim_up is None:

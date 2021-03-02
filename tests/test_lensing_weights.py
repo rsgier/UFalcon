@@ -68,8 +68,20 @@ def test_continuous_to_dirac(cosmo):
                                                 [z_source, 1.0],
                                                 [z_source + 0.001, 0.0]])
             # get the weights
-            cont_weights = lensing_weights.Continuous(None, z_lim_low=0, z_lim_up=2)
-            cont_weights_fast = lensing_weights.Continuous(None, z_lim_low=0, z_lim_up=2, fast_mode=True)
+            cont_weights = lensing_weights.Continuous("None", z_lim_low=0, z_lim_up=2)
+
+        w_cont = cont_weights(z_low, z_up, cosmo)
+        print(w_cont)
+
+        assert (w_dirac - w_cont) / w_cont < 0.01
+
+        # compute continuous weight with a tabulated function
+        # tabulated delta function
+        z_dist = np.array([[z_source - 0.001, 0.0],
+                           [z_source, 1.0],
+                           [z_source + 0.001, 0.0]])
+        # get the weights
+        cont_weights = lensing_weights.Continuous(z_dist, z_lim_low=0, z_lim_up=2)
 
         w_cont = cont_weights(z_low, z_up, cosmo)
         print(w_cont)
